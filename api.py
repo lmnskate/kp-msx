@@ -212,7 +212,7 @@ async def toggle_bookmark(request: Request):
     content_id = request.query_params.get('content_id')
     folder_id = int(request.query_params.get('folder_id'))
     await request.state.device.kp.toggle_bookmark(content_id, folder_id)
-    return MSX.reload_panel()
+    return MSX.empty_response()
 
 if __name__ == '__main__':
     uvicorn.run(app, host='0.0.0.0', port=int(config.PORT))

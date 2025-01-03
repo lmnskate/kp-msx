@@ -240,9 +240,6 @@ class Content:
     def in_bookmarks(self):
         return self.bookmarks is not None and len(self.bookmarks) > 0
 
-    def to_bookmark_check(self, folder_id):
-        return '{ico:check}' if folder_id in self.bookmarks else None
-
     def to_bookmarks_msx_panel(self, folders: 'list[Folder]'):
         entry = {
             "type": "list",
@@ -259,8 +256,8 @@ class Content:
             entry['items'].append({
                 "id": str(folder.id),
                 "label": folder.title,
-                "action": f'execute:{config.MSX_HOST}/msx/toggle_bookmark?content_id={self.id}&folder_id={folder.id}&id={{ID}}',
-                'stamp': self.to_bookmark_check(folder.id),
+                "action": f'[execute:{config.MSX_HOST}/msx/toggle_bookmark?content_id={self.id}&folder_id={folder.id}&id={{ID}}|reload:panel]',
+                'stamp': '{ico:check}' if folder.id in self.bookmarks else None
             })
         return entry
 

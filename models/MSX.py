@@ -236,3 +236,12 @@ class MSX:
             }
         }
 
+    @classmethod
+    def empty_response(cls):
+        return {
+            'response': {
+                'status': 200,
+                'data': {'action': '[]'}
+            }
+        }
+
