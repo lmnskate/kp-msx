@@ -131,7 +131,7 @@ class Content:
     def to_msx_panel(self):
         buttons = []
 
-        if self.type == 'serial':
+        if self.seasons:
             buttons.append(self.to_subscription_button())
 
         buttons.append(self.to_bookmark_button())
