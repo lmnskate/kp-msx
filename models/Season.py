@@ -17,21 +17,12 @@ class Season:
         for i, episode in enumerate(self.episodes):
             entry = {
                 "label": episode.menu_title(),
+                #"title": episode.menu_title(),
+                "playerLabel": episode.player_title(),
                 'action': episode.msx_action(),
                 'stamp': '{ico:check}' if episode.watched else None,
-                #'properties': episode.subtitle_tracks
+                'resumeKey': episode.player_title(),
+                'triggerReady': episode.trigger_ready()
             }
             items.append(entry)
         return items
-
-    def to_msx_player_update_actions(self, episode=0):
-        episode = int(episode) - 1
-        acts = []
-        acts += MSX.player_update_button('content', 'list-alt',  f'panel:{config.MSX_HOST}/msx/episodes?id={{ID}}&content_id={self.content_id}&season={self.n}')
-
-        if episode != 0:
-            acts += MSX.player_update_button('prev', 'skip-previous', self.episodes[episode - 1].msx_action())
-        if episode + 1 < len(self.episodes):
-            acts += MSX.player_update_button('next', 'skip-next', self.episodes[episode + 1].msx_action())
-
-        return acts

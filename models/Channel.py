@@ -16,8 +16,6 @@ class Channel:
             'title': self.title,
             'playerLabel': self.title,
             'image': self.logo,
-            "action": f"video:plugin:{config.PLAYER}?url={self.stream}",
-            'contentIcon': 'settings',
-            'contentAction': 'panel:request:player:options'
+            "action": f"video:plugin:{config.PLAYER}?url={self.stream}"
         }
         return entry

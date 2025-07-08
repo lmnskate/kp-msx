@@ -3,40 +3,6 @@ import config
 
 class MSX:
 
-    DEFAULT_PLAYER_UPDATE_ACTIONS = [
-        {
-            'action': 'player:button:restart:setup',
-            'data': {'icon': 'settings', 'action': 'panel:request:player:options'}
-        }, {
-            'action': 'reload:panel'
-        }, {
-            'action': 'trigger:ready:trigger:-1:player:button:next:execute'
-        }
-    ]
-
-    @staticmethod
-    def player_update_title(title): return [{'action': f'player:label:content:{title}'}]
-
-    @staticmethod
-    def player_update_button(button, icon, action): return [
-        {
-            'action': f'player:button:{button}:setup',
-            'data': {'icon': icon, 'action': action}
-        }
-    ]
-
-    @staticmethod
-    def player_commit(data): return [{'action': f'player:commit', 'data': data}]
-
-    @staticmethod
-    def reload_panel(): return {
-            'response': {
-                'status': 200,
-                'data': {'action': 'reload:panel'}
-            }
-        }
-
-
     def __init__(self):
         pass
 
@@ -221,20 +187,6 @@ class MSX:
             "items": [i.to_msx() for i in result]
         }
 
-    @staticmethod
-    def play(actions):
-        return {
-            'response': {
-                'status': 200,
-                'data': {
-                    'action': 'data',
-                    'data': {
-                        'actions': MSX.DEFAULT_PLAYER_UPDATE_ACTIONS.copy() + actions
-                    }
-                }
-            }
-        }
-
     @classmethod
     def update_panel(cls, content_id, value):
         return {
@@ -280,8 +232,8 @@ class MSX:
                 "properties": {
                     'control:type': 'extended',
                     "button:content:enable": "false",
-                    "button:restart:icon": "{context:contentIcon}",
-                    "button:restart:action": "{context:contentAction}",
+                    'button:restart:icon': 'settings',
+                    'button:restart:action': 'panel:request:player:options',
                     'progress:display': 'false'
                 }
             },

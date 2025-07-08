@@ -44,11 +44,14 @@ class Episode:
         return f'[S{self.season}/E{self.n}] {self.title}'
 
     def msx_action(self):
+        return f'video:plugin:{config.PLAYER}?url={self.video}'
+
+    def trigger_ready(self):
         params = {
             'content_id': self.content_id,
             'season': self.season,
             'episode': self.n
         }
-        return f'[video:plugin:{config.PLAYER}?url={self.video}|execute:{config.MSX_HOST}/msx/play?{urlencode(params)}&id={{ID}}]'
+        return f'execute:{config.MSX_HOST}/msx/play?{urlencode(params)}&id={{ID}}'
 
 

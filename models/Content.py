@@ -2,6 +2,7 @@ import config
 from models.Folder import Folder
 from models.MSX import MSX
 from models.Season import Season
+from models.Video import Video
 
 
 class Content:
@@ -30,37 +31,12 @@ class Content:
         if self.bookmarks is not None and isinstance(self.bookmarks, list):
             self.bookmarks = [Folder(i).id for i in self.bookmarks]
 
-        self.video = None
-
         self.watched = data.get('watched') == 1
 
-        self.subtitle_tracks = dict()
+        self.videos = None
 
         if (videos := data.get('videos')) is not None:
-            video_entry = None
-
-            for _video in videos:
-                if len(_video['files']) > 0:
-                    video_entry = _video
-                    break
-
-            video_files = None
-            if config.QUALITY is not None:
-                video_files = [i for i in video_entry['files'] if i['quality'] == config.QUALITY]
-                if len(video_files) == 0:
-                    video_files = None
-                else:
-                    video_files = video_files[0]
-
-            if video_files is None:
-                video_files = sorted(video_entry['files'], key=lambda x: x.get('quality_id'))[-1]
-
-            self.video = video_files['url'][config.PROTOCOL]
-
-            if config.PROTOCOL == 'http':
-                for subtitle_track in video_entry['subtitles']:
-                    language = subtitle_track.get('lang')
-                    self.subtitle_tracks[f'html5x:subtitle:{language}:{language}'] = subtitle_track['url']
+           self.videos = [Video(i) for i in videos]
 
         self.seasons = None
 
@@ -68,16 +44,13 @@ class Content:
             self.poster = (data.get('posters') or {}).get('big')
             self.seasons = [Season(i, self.id) for i in seasons]
 
-    def msx_path(self):
-        return f'/content?id={{ID}}&content_id={self.id}'
-
     def to_msx(self):
         entry = {
             'title': self.title,
             'image': self.poster,
             "action": f"panel:{config.MSX_HOST}/msx/content?id={{ID}}&content_id={self.id}"
         }
-        if self.media is not None and self.type == 'serial':
+        if self.media is not None and self.media.season > 0:
             entry['titleFooter'] = self.media.to_subtitle()
         else:
             entry['titleFooter'] = ''
@@ -89,8 +62,11 @@ class Content:
         return entry
 
     def msx_action(self):
-        if self.video is not None:
-            return f"[video:plugin:{config.PLAYER}?url={self.video}|execute:{config.MSX_HOST}/msx/play?content_id={self.id}&id={{ID}}]"
+        if self.videos is not None:
+            if len(self.videos) == 1:
+                return self.videos[0].msx_action()
+            else:
+                return f'panel:{config.MSX_HOST}/msx/multivideo?id={{ID}}&content_id={self.id}'
         if self.seasons is not None:
             return f"panel:{config.MSX_HOST}/msx/seasons?id={{ID}}&content_id={self.id}"
 
@@ -140,9 +116,21 @@ class Content:
             "type": "button",
             "layout": f"4,5,{4-len(buttons)},1",
             "label": "Смотреть",
+            "playerLabel": self.title,
             'focus': True,
             'action': self.msx_action(),
-            # 'properties': self.subtitle_tracks
+            'properties': {
+                'control:type': 'extended',
+                'button:content:icon': 'list-alt',
+                'button:content:action': f'player:content',
+                'button:content:enable': f'false',
+                'button:restart:icon': 'settings',
+                'button:restart:action': 'panel:request:player:options',
+                'button:speed:icon': 'replay',
+                'button:speed:action': 'player:restart',
+                'resume:key': self.title,
+                'trigger:ready': f'execute:{config.MSX_HOST}/msx/play?content_id={self.id}&id={{ID}}'
+            }
         }
 
         buttons = [watch_button] + buttons
@@ -211,6 +199,33 @@ class Content:
             })
         return entry
 
+    def to_multivideo_msx_panel(self):
+        entry = {
+            "type": "list",
+            "headline": self.title,
+            'template': {
+                'enumerate': False,
+                "type": "button",
+                "layout": f"0,0,8,1",
+                'stampColor': 'msx-glass',
+                'playerLabel': self.title,
+                'properties': {
+                    'control:type': 'extended',
+                    'button:content:icon': 'list-alt',
+                    'button:content:action': f'player:content',
+                    'button:content:enable': f'false',
+                    'button:restart:icon': 'settings',
+                    'button:restart:action': 'panel:request:player:options',
+                    'button:speed:icon': 'replay',
+                    'button:speed:action': 'player:restart',
+                    'resume:key': self.title,
+                    'trigger:ready': f'execute:{config.MSX_HOST}/msx/play?content_id={self.id}&id={{ID}}'
+                }
+            },
+            "items": [i.to_multivideo_entry() for i in self.videos]
+        }
+        return entry
+
     def to_episodes_msx_panel(self, season_number):
         for season in self.seasons:
             if season.n == season_number:
@@ -219,32 +234,25 @@ class Content:
             "type": "list",
             "headline": f'{self.title} [S{season.n}]',
             'template': {
-                'enumerate': False,
+                #'enumerate': False,  # breaks previous/next buttons in player
                 "type": "button",
                 "layout": f"0,0,8,1",
-                'stampColor': 'msx-glass'
+                'stampColor': 'msx-glass',
+                'properties': {
+                    'control:type': 'extended',
+                    'button:content:icon': 'list-alt',
+                    'button:content:action': f'player:content',
+                    'button:restart:icon': 'settings',
+                    'button:restart:action': 'panel:request:player:options',
+                    'button:speed:icon': 'replay',
+                    'button:speed:action': 'player:restart',
+                    'resume:key': '{context:resumeKey}',
+                    'trigger:ready': '{context:triggerReady}'
+                }
             },
             "items": season.to_episode_pages()
         }
         return entry
-
-    def to_player_opts(self, season=None, episode=None):
-        acts = []
-        if self.seasons is None:
-            acts += MSX.player_update_title(self.title)
-            #acts += MSX.player_commit(self.subtitle_tracks)
-        else:
-            for _season in self.seasons:
-                if _season.n != int(season):
-                    continue
-                for _episode in _season.episodes:
-                    if _episode.n == int(episode):
-                        break
-                break
-            acts += _season.to_msx_player_update_actions(episode)
-            acts += MSX.player_update_title(_episode.player_title())
-            #acts += MSX.player_commit(_episode.subtitle_tracks)
-        return acts
 
     def in_bookmarks(self):
         return self.bookmarks is not None and len(self.bookmarks) > 0

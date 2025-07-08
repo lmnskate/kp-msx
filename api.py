@@ -140,6 +140,12 @@ async def content(request: Request):
     return result.to_msx_panel()
 
 
+@app.get(ENDPOINT + '/multivideo')
+async def content(request: Request):
+    result = await request.state.device.kp.get_single_content(request.query_params.get('content_id'))
+    return result.to_multivideo_msx_panel()
+
+
 @app.get(ENDPOINT + '/content/bookmarks')
 async def content_bookmarks(request: Request):
     result = await request.state.device.kp.get_single_content(request.query_params.get('content_id'))
@@ -203,8 +209,8 @@ async def play(request: Request):
     else:
         if not result.watched:
             await request.state.device.kp.toggle_watched(content_id)
-    acts = result.to_player_opts(season, episode)
-    return MSX.play(acts)
+
+    return MSX.empty_response()
 
 
 @app.post(ENDPOINT + '/toggle_subscription')
