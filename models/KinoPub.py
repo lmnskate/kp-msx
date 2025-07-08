@@ -2,6 +2,7 @@ import aiohttp
 
 import config
 from models.Category import Category
+from models.Channel import Channel
 from models.Content import Content
 from models.Folder import Folder
 from models.Media import Media
@@ -83,6 +84,12 @@ class KinoPub:
         if result is None:
             return None
         return [Content(i) for i in result['items']]
+
+    async def get_tv(self):
+        result = await self.api(f'/tv')
+        if result is None:
+            return None
+        return [Channel(i) for i in result['channels']]
 
     async def notify(self, device_id):
         await self.api(f'/device/notify', {'title': "KP-MSX", 'hardware': '¯\\_(ツ)_/¯', 'software': device_id}, method='POST')

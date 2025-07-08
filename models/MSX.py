@@ -83,6 +83,11 @@ class MSX:
         }
         entry['menu'].append({
             "type": "default",
+            "label": "Спорт",
+            'data': f'{config.MSX_HOST}/msx/tv?id={{ID}}'
+        })
+        entry['menu'].append({
+            "type": "default",
             "label": "Поиск",
             "icon": "search",
             'data': f'request:interaction:{config.MSX_HOST}/msx/search?id={{ID}}&q={{INPUT}}|search:3|ru@http://msx.benzac.de/interaction/input.html'
@@ -250,4 +255,38 @@ class MSX:
                 'data': {'action': '[]'}
             }
         }
+
+    @classmethod
+    def tv_channels(cls, channels):
+        resp = {
+            "type": "list",
+            'header': {
+                'items': [
+                    {
+                        'type': 'default',
+                        'layout': '0,0,12,1',
+                        "color": "msx-glass",
+                        'headline': 'Спортивные каналы предоставляются в качестве бонуса и работают «как есть»',
+                        'titleFooter': 'Для просмотра полноценного онлайн-ТВ с архивом рекомендуется использовать другие сервисы',
+                        'action': '[]'
+                    }
+                ]
+            },
+            "template": {
+                "type": "separate",
+                "layout": "0,0,2,3",
+                "color": "msx-glass",
+                "title": "Title",
+                "properties": {
+                    'control:type': 'extended',
+                    "button:content:enable": "false",
+                    "button:restart:icon": "{context:contentIcon}",
+                    "button:restart:action": "{context:contentAction}",
+                    'progress:display': 'false'
+                }
+            },
+            "items": [channel.to_msx() for channel in channels]
+        }
+
+        return resp
 

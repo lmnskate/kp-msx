@@ -116,6 +116,14 @@ async def bookmarks(request: Request):
     return result
 
 
+@app.get(ENDPOINT + '/tv')
+async def bookmarks(request: Request):
+    result = await request.state.device.kp.get_tv()
+
+    result = MSX.tv_channels(result)
+    return result
+
+
 @app.get(ENDPOINT + '/folder')
 async def folder(request: Request):
     offset = request.query_params.get('offset') or 0

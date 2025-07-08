@@ -1,10 +1,9 @@
 import config
-from models.MSX import MSX
 
 
 class Category:
 
-    BLACKLIST = '4k'
+    BLACKLIST = ['4k']
 
     def __init__(self, data):
         self.id = data.get('id')
