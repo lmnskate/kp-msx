@@ -250,13 +250,16 @@ async def toggle_bookmark(request: Request):
     upd = result.to_bookmark_stamp(folder_id)
     return MSX.update_panel(str(folder_id), upd)
 
+
 @app.get(ENDPOINT + '/error')
 async def error_page(request: Request):
-    return MSX.handle_exception()
+    return MSX.handle_exception(error_page=True)
+
 
 @app.get(ENDPOINT + '/too_old')
 async def too_old(request: Request):
     return MSX.unsupported_version()
+
 
 if __name__ == '__main__':
     uvicorn.run(app, host='0.0.0.0', port=int(config.PORT))

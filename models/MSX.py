@@ -261,7 +261,37 @@ class MSX:
         return resp
 
     @staticmethod
-    def handle_exception():
+    def handle_exception(error_page=False):
+        msg = {
+            "type": "space",
+            "layout": "0,0,6,2",
+            "title": 'Произошла ошибка загрузки',
+            "titleFooter": 'Скорее всего, кинопаб сейчас недоступен. Проверьте статус на kinopub.online и ожидайте ремонта.'
+        }
+        restart_app_btn = {
+            "type": "button",
+            "layout": "0,2,6,1",
+            "label": "Перезапустить приложение",
+            "action": f"reload"
+        }
+        reload_content_btn = {
+            "type": "button",
+            "layout": "0,3,6,1",
+            "label": "Перезагрузить раздел",
+            "action": f"reload:content"
+        }
+        reload_panel_btn = {
+            "type": "button",
+            "layout": "0,4,6,1",
+            "label": "Перезагрузить окно",
+            "action": f"reload:panel"
+        }
+
+        if error_page:
+            items = [msg, restart_app_btn]
+        else:
+            items = [msg, restart_app_btn, reload_content_btn, reload_panel_btn]
+
         return {
             "menu": [{
                 "label": "¯\\_(ツ)_/¯",
@@ -271,19 +301,7 @@ class MSX:
             "headline": "Ошибка",
             "pages": [
                 {
-                    "items": [
-                        {
-                            "type": "space",
-                            "layout": "0,0,6,2",
-                            "title": 'Произошла ошибка загрузки',
-                            "titleFooter": 'Скорее всего, кинопаб сейчас недоступен. Проверьте статус на kinopub.online и ожидайте ремонта.'
-                        }, {
-                            "type": "button",
-                            "layout": "0,2,6,1",
-                            "label": "Перезапустить",
-                            "action": f"reload"
-                        }
-                    ]
+                    "items": items
                 }
             ]
         }
