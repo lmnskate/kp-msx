@@ -72,6 +72,7 @@ class Content:
 
     SUBSCRIPTION_BUTTON_ID = "subscription_button"
     BOOKMARK_BUTTON_ID = "bookmark_button"
+    WATCH_BUTTON_ID = "watch_button"
 
     def to_subscription_button(self):
         if self.subscribed:
@@ -113,6 +114,7 @@ class Content:
         buttons.append(self.to_bookmark_button())
 
         watch_button = {
+            "id": self.WATCH_BUTTON_ID,
             "type": "button",
             "layout": f"4,5,{4-len(buttons)},1",
             "label": "Смотреть",

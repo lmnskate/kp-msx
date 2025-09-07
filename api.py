@@ -1,21 +1,17 @@
 import traceback
-import uuid
 
-from fastapi import encoders
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.requests import Request
-from starlette.responses import JSONResponse, HTMLResponse
-from functools import wraps
+from starlette.responses import JSONResponse, HTMLResponse, FileResponse
 
 import config
-from models.Category import Category
 from models.Content import Content
 from models.Device import Device
 from models.KinoPub import KinoPub
 from models.MSX import MSX
-from util import pages
+
 
 app = FastAPI()
 app.add_middleware(
@@ -27,7 +23,11 @@ app.add_middleware(
 )
 
 ENDPOINT = '/msx'
-UNAUTHORIZED = ['/', ENDPOINT + '/start.json']
+UNAUTHORIZED = [
+    '/',
+    '/subtitleEditor',
+    ENDPOINT + '/start.json'
+]
 
 
 @app.middleware('http')
@@ -67,8 +67,12 @@ async def auth(request: Request, call_next):
 
 
 @app.get('/')
-async def root(request: Request):
-    return HTMLResponse(pages.ROOT)
+async def index(request: Request):
+    return FileResponse('pages/index.html')
+
+@app.get('/subtitleEditor')
+async def subtitle_editor(request: Request):
+    return FileResponse('pages/subtitle_editor.html')
 
 
 @app.get(ENDPOINT + '/start.json')
