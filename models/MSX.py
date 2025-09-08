@@ -251,7 +251,7 @@ class MSX:
                     'control:type': 'extended',
                     "button:content:enable": "false",
                     'button:restart:icon': 'settings',
-                    'button:restart:action': 'panel:request:player:options',
+                    'button:restart:action': MSX.player_action_btn(),
                     'progress:display': 'false'
                 }
             },
@@ -348,3 +348,10 @@ class MSX:
                 }
             ]
         }
+
+    @staticmethod
+    def player_action_btn():
+        if config.TIZEN:
+            return 'content:request:interaction:init@http://msx.benzac.de/interaction/tizen.html'
+        else:
+            return 'panel:request:player:options'
