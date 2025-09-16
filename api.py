@@ -25,7 +25,7 @@ app.add_middleware(
 ENDPOINT = '/msx'
 UNAUTHORIZED = [
     '/',
-    '/subtitleEditor',
+    '/subtitleShifter',
     ENDPOINT + '/start.json'
 ]
 
@@ -70,9 +70,9 @@ async def auth(request: Request, call_next):
 async def index(request: Request):
     return FileResponse('pages/index.html')
 
-@app.get('/subtitleEditor')
+@app.get('/subtitleShifter')
 async def subtitle_editor(request: Request):
-    return FileResponse('pages/subtitle_editor.html')
+    return FileResponse('pages/subtitle_shifter.html')
 
 
 @app.get(ENDPOINT + '/start.json')
