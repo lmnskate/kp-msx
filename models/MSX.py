@@ -68,7 +68,7 @@ class MSX:
             "type": "default",
             "label": "История",
             "icon": "history",
-            'data': f"request:interaction:{config.MSX_HOST}/msx/history?id={{ID}}&offset={{OFFSET}}&limit={{LIMIT}}|20@http://msx.benzac.de/interaction/paging.html"
+            'data': f"request:interaction:{config.MSX_HOST}/msx/history?id={{ID}}&page={{PAGE}}@{config.MSX_HOST}/paging.html"
         })
         entry['menu'].append({
             "type": "default",
@@ -151,29 +151,34 @@ class MSX:
             resp['template']['decompress'] = decompress
 
         if page == 1 and extra is None:
-            resp['items'] = [
-                {
-                    'title': 'Свежие',
-                    'icon': 'fiber-new',
-                    'action': f'content:request:interaction:{config.MSX_HOST}/msx/category?id={{ID}}&category={category}&extra=fresh&offset={{OFFSET}}&limit={{LIMIT}}|20@http://msx.benzac.de/interaction/paging.html'
-                },
-                {
-                    'title': 'Горячие',
-                    'icon': 'whatshot',
-                    'action': f'content:request:interaction:{config.MSX_HOST}/msx/category?id={{ID}}&category={category}&extra=hot&offset={{OFFSET}}&limit={{LIMIT}}|20@http://msx.benzac.de/interaction/paging.html'
-                },
-                {
-                    'title': 'Популярные',
-                    'icon': 'thumb-up',
-                    'action': f'content:request:interaction:{config.MSX_HOST}/msx/category?id={{ID}}&category={category}&extra=popular&offset={{OFFSET}}&limit={{LIMIT}}|20@http://msx.benzac.de/interaction/paging.html'
-                },
-                {
-                    'title': 'Жанры',
-                    'icon': 'category',
-                    'action': f'content:{config.MSX_HOST}/msx/genres?id={{ID}}&category={category}'
-                }
-            ]
-            entries = entries[:(20 - len(resp['items']))]
+            resp['header'] = {
+                "items": [
+                    {
+                        'type': 'button',
+                        "layout": "0,0,3,1",
+                        'label': 'Свежие',
+                        'action': f'content:request:interaction:{config.MSX_HOST}/msx/category?id={{ID}}&category={category}&extra=fresh&page={{PAGE}}@{config.MSX_HOST}/paging.html'
+                    },
+                    {
+                        'type': 'button',
+                        "layout": "3,0,3,1",
+                        'label': 'Горячие',
+                        'action': f'content:request:interaction:{config.MSX_HOST}/msx/category?id={{ID}}&category={category}&extra=hot&page={{PAGE}}@{config.MSX_HOST}/paging.html'
+                    },
+                    {
+                        'type': 'button',
+                        "layout": "6,0,3,1",
+                        'label': 'Популярные',
+                        'action': f'content:request:interaction:{config.MSX_HOST}/msx/category?id={{ID}}&category={category}&extra=popular&page={{PAGE}}@{config.MSX_HOST}/paging.html'
+                    },
+                    {
+                        'type': 'button',
+                        "layout": "9,0,3,1",
+                        'label': 'Жанры',
+                        'action': f'content:{config.MSX_HOST}/msx/genres?id={{ID}}&category={category}'
+                    }
+                ]
+            }
         for entry in entries:
             resp['items'].append(entry.to_msx())
 

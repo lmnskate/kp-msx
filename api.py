@@ -26,6 +26,8 @@ ENDPOINT = '/msx'
 UNAUTHORIZED = [
     '/',
     '/subtitleShifter',
+    '/paging.html',
+    '/paging.js',
     ENDPOINT + '/start.json'
 ]
 
@@ -74,6 +76,13 @@ async def index(request: Request):
 async def subtitle_editor(request: Request):
     return FileResponse('pages/subtitle_shifter.html')
 
+@app.get('/paging.html')
+async def subtitle_editor(request: Request):
+    return FileResponse('pages/paging.html')
+
+@app.get('/paging.js')
+async def subtitle_editor(request: Request):
+    return FileResponse('pages/paging.js')
 
 @app.get(ENDPOINT + '/start.json')
 async def start(request: Request):
@@ -114,8 +123,7 @@ async def check_registration(request: Request):
 
 @app.get(ENDPOINT + '/category')
 async def category(request: Request):
-    offset = request.query_params.get('offset') or 0
-    page = int(offset) // 20 + 1
+    page = int(request.query_params.get('page'))
     cat = request.query_params.get('category')
     extra = request.query_params.get('extra')
     genre = request.query_params.get('genre')
@@ -150,8 +158,7 @@ async def bookmarks(request: Request):
 
 @app.get(ENDPOINT + '/folder')
 async def folder(request: Request):
-    offset = request.query_params.get('offset') or 0
-    page = int(offset) // 20 + 1
+    page = int(request.query_params.get('page'))
     f = request.query_params.get('folder')
     result = await request.state.device.kp.get_bookmark_folder(f, page=page)
     result = MSX.content(result, "folder", page, extra="wtf")
@@ -199,8 +206,7 @@ async def search(request: Request):
 
 @app.get(ENDPOINT + '/history')
 async def history(request: Request):
-    offset = request.query_params.get('offset') or 0
-    page = int(offset) // 20 + 1
+    page = int(request.query_params.get('page'))
     result = await request.state.device.kp.get_history(page=page)
     result = MSX.content(result, "history", page, extra="wtf")
     return result

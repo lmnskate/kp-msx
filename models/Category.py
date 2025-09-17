@@ -14,5 +14,5 @@ class Category:
         return {
             "type": "default",
             "label": self.title,
-            "data": f"request:interaction:{config.MSX_HOST}/msx/category?id={{ID}}&category={self.id}&offset={{OFFSET}}&limit={{LIMIT}}|20@http://msx.benzac.de/interaction/paging.html"
+            "data": f"request:interaction:{config.MSX_HOST}/msx/category?id={{ID}}&category={self.id}&page={{PAGE}}@{config.MSX_HOST}/paging.html"
         }

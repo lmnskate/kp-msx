@@ -11,5 +11,5 @@ class Folder:
         return {
             "type": "default",
             "label": self.title,
-            "action": f"content:request:interaction:{config.MSX_HOST}/msx/folder?id={{ID}}&folder={self.id}&offset={{OFFSET}}&limit={{LIMIT}}|20@http://msx.benzac.de/interaction/paging.html"
+            "action": f"content:request:interaction:{config.MSX_HOST}/msx/folder?id={{ID}}&folder={self.id}&page={{PAGE}}@{config.MSX_HOST}/paging.html"
         }
