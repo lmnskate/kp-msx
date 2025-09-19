@@ -51,7 +51,7 @@ class KinoPub:
             path += f'/{extra}'
         params = {'page': page}
         if category is not None:
-            params['category'] = category
+            params['type'] = category
         if genre is not None:
             params['genre'] = genre
         result = await self.api(path, params=params)
