@@ -49,6 +49,11 @@ class MSX:
         }
         entry['menu'].append({
             "type": "default",
+            "label": "Мультфильмы",
+            'data': f'request:interaction:{config.MSX_HOST}/msx/category?id={{ID}}&genre=23&page={{PAGE}}@{config.MSX_HOST}/paging.html'
+        })
+        entry['menu'].append({
+            "type": "default",
             "label": "Спорт",
             'data': f'{config.MSX_HOST}/msx/tv?id={{ID}}'
         })

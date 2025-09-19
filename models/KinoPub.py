@@ -45,11 +45,13 @@ class KinoPub:
             return None
         return [Genre(i) for i in result['items']]
 
-    async def get_content(self, category, page=1, extra=None, genre=None):
+    async def get_content(self, category=None, page=1, extra=None, genre=None):
         path = '/items'
         if extra is not None:
             path += f'/{extra}'
-        params = {'type': category, 'page': page}
+        params = {'page': page}
+        if category is not None:
+            params['category'] = category
         if genre is not None:
             params['genre'] = genre
         result = await self.api(path, params=params)

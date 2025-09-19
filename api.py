@@ -127,7 +127,7 @@ async def category(request: Request):
     cat = request.query_params.get('category')
     extra = request.query_params.get('extra')
     genre = request.query_params.get('genre')
-    result = await request.state.device.kp.get_content(cat, page=page, extra=extra, genre=genre)
+    result = await request.state.device.kp.get_content(category=cat, page=page, extra=extra, genre=genre)
     result = MSX.content(result, cat, page, extra=(extra or genre))
     return result
 
