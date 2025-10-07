@@ -90,6 +90,12 @@ class KinoPub:
         result = await self.api(f'/bookmarks/{id}', {'page': page})
         if result is None:
             return None
+        try:
+            current_page = result['pagination']['current']
+            if page > current_page:
+                return []
+        except:
+            pass
         return [Content(i) for i in result['items']]
 
     async def get_history(self, page=1):
