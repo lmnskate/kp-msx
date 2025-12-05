@@ -44,6 +44,8 @@ class Content:
             self.poster = (data.get('posters') or {}).get('big')
             self.seasons = [Season(i, self.id) for i in seasons]
 
+        self.new_episodes = data.get('new')
+
     def update_bookmarks(self, folders):
         self.bookmarks = [i.id for i in folders]
 
@@ -61,6 +63,9 @@ class Content:
                 entry['titleFooter'] += f' {{ico:stars}} {self.rating}'
             if self.year:
                 entry['titleFooter'] += f' {{ico:calendar-month}} {self.year}'
+            if self.new_episodes is not None:
+                entry['titleFooter'] += f' {{ico:new-releases}} {self.new_episodes}'
+
             entry['titleFooter'] = entry['titleFooter'].strip()
         return entry
 
@@ -145,6 +150,7 @@ class Content:
             stamp += f' {{ico:stars}} {self.rating}'
         if self.year:
             stamp += f' {{ico:calendar-month}} {self.year}'
+
         stamp = stamp.strip()
         if len(stamp) == 0:
             stamp = None
