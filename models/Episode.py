@@ -1,8 +1,5 @@
-from urllib.parse import urlencode
-
-from pydantic import constr
-
 import config
+from models.MSX import MSX
 
 
 class Episode:
@@ -50,6 +47,7 @@ class Episode:
             return f'video:{self.video}'
         else:
             return f'video:plugin:{config.PLAYER}?url={self.video}'
+            #return f'video:plugin:{config.PLAYER}?url={self.video}'
 
     def trigger_ready(self):
         params = {
@@ -57,6 +55,7 @@ class Episode:
             'season': self.season,
             'episode': self.n
         }
-        return f'execute:{config.MSX_HOST}/msx/play?{urlencode(params)}&id={{ID}}'
+        return MSX.format_action('/msx/play', params=params, module='execute')
+        #return f'execute:{config.MSX_HOST}/msx/play?{urlencode(params)}&id={{ID}}'
 
 

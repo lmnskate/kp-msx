@@ -1,4 +1,8 @@
+from urllib.parse import urlencode
+
 import config
+
+from models.CategoryExtra import CategoryExtra
 
 
 class MSX:
@@ -7,14 +11,42 @@ class MSX:
         pass
 
     @staticmethod
+    def format_action(path: str, params: dict = None, interaction: str = None, options: str = None, module: str = None):
+        if params is None:
+            params = {}
+        params.update({'id': '{ID}'})
+
+        if path.startswith('/'):
+            data = f'{config.MSX_HOST}{path}'
+        else:
+            data = path
+
+        data = data + '?' + urlencode(params, safe='{}')
+
+        if interaction:
+
+            if interaction.startswith('/'):
+                interaction = f'{config.MSX_HOST}{interaction}'
+
+            data = 'request:interaction:' + data
+            if options:
+                data = data + '|' + options
+            data = data + '@' + interaction
+
+        if module:
+            data = module + ':' + data
+
+        return data
+
+    @staticmethod
     def start():
         return {
             'name': 'kino.pub',
             'version': '6.6.6',
-            'parameter': f'menu:{config.MSX_HOST}/msx/menu?id={{ID}}',
+            'parameter': MSX.format_action('/msx/menu', module='menu'),
             'welcome': 'none',
             'launcher': {
-                "parameter": f'menu:{config.MSX_HOST}/msx/menu?id={{ID}}',
+                "parameter": MSX.format_action('/msx/menu', module='menu'),
                 "icon": "movie-filter",
                 "image": "none",
                 "color": "none"
@@ -32,60 +64,24 @@ class MSX:
                 {
                     "icon": "vpn-key",
                     "label": "Регистрация",
-                    "data": f"{config.MSX_HOST}/msx/registration?id={{ID}}"
+                    "data": MSX.format_action('/msx/registration')
                 }
             ],
         }
 
     @staticmethod
     def registered_menu(categories):
+        menu = [category.to_msx() for category in categories or [] if not category.blacklisted]
+
         entry = {
             "reuse": False,
             "cache": False,
             "restore": False,
             "refocus": 1,
             "headline": "kino.pub",
-            "menu": [category.to_msx() for category in categories or [] if not category.blacklisted],
+            "options": MSX.settings_menu(),
+            "menu": menu,
         }
-        entry['menu'].append({
-            "type": "default",
-            "label": "Мультфильмы",
-            'data': f'request:interaction:{config.MSX_HOST}/msx/category?id={{ID}}&genre=23&page={{PAGE}}@{config.MSX_HOST}/paging.html'
-        })
-        entry['menu'].append({
-            "type": "default",
-            "label": "Аниме",
-            'data': f'request:interaction:{config.MSX_HOST}/msx/category?id={{ID}}&genre=25&page={{PAGE}}@{config.MSX_HOST}/paging.html'
-        })
-        entry['menu'].append({
-            "type": "default",
-            "label": "Спорт",
-            'data': f'{config.MSX_HOST}/msx/tv?id={{ID}}'
-        })
-        entry['menu'].append({
-            "type": "default",
-            "label": "Поиск",
-            "icon": "search",
-            'data': f'request:interaction:{config.MSX_HOST}/msx/search?id={{ID}}&q={{INPUT}}|search:3|ru@http://msx.benzac.de/interaction/input.html'
-        })
-        entry['menu'].append({
-            "type": "default",
-            "label": "Закладки",
-            "icon": "bookmark",
-            'data': f'{config.MSX_HOST}/msx/bookmarks?id={{ID}}'
-        })
-        entry['menu'].append({
-            "type": "default",
-            "label": "История",
-            "icon": "history",
-            'data': f"request:interaction:{config.MSX_HOST}/msx/history?id={{ID}}&page={{PAGE}}@{config.MSX_HOST}/paging.html"
-        })
-        entry['menu'].append({
-            "type": "default",
-            "label": "Я смотрю",
-            "icon": "tv",
-            'data': f'{config.MSX_HOST}/msx/watching?id={{ID}}'
-        })
         return entry
 
     @staticmethod
@@ -121,7 +117,8 @@ class MSX:
                         "type": "button",
                         "layout": "0,2,6,1",
                         "label": "Я ввёл код",
-                        "action": f"execute:{config.MSX_HOST}/msx/check_registration?id={{ID}}"
+                        "action": MSX.format_action('/msx/check_registration', module='execute')
+                        #"action": f"execute:{config.MSX_HOST}/msx/check_registration?id={{ID}}"
                     }]
             }]
         }
@@ -162,32 +159,7 @@ class MSX:
 
         if page == 1 and extra is None:
             resp['header'] = {
-                "items": [
-                    {
-                        'type': 'button',
-                        "layout": "0,0,3,1",
-                        'label': 'Свежие',
-                        'action': f'content:request:interaction:{config.MSX_HOST}/msx/category?id={{ID}}&category={category}&extra=fresh&page={{PAGE}}@{config.MSX_HOST}/paging.html'
-                    },
-                    {
-                        'type': 'button',
-                        "layout": "3,0,3,1",
-                        'label': 'Горячие',
-                        'action': f'content:request:interaction:{config.MSX_HOST}/msx/category?id={{ID}}&category={category}&extra=hot&page={{PAGE}}@{config.MSX_HOST}/paging.html'
-                    },
-                    {
-                        'type': 'button',
-                        "layout": "6,0,3,1",
-                        'label': 'Популярные',
-                        'action': f'content:request:interaction:{config.MSX_HOST}/msx/category?id={{ID}}&category={category}&extra=popular&page={{PAGE}}@{config.MSX_HOST}/paging.html'
-                    },
-                    {
-                        'type': 'button',
-                        "layout": "9,0,3,1",
-                        'label': 'Жанры',
-                        'action': f'content:{config.MSX_HOST}/msx/genres?id={{ID}}&category={category}'
-                    }
-                ]
+                "items": [i.to_msx(category) for i in CategoryExtra.static_extras()]
             }
         for entry in entries:
             resp['items'].append(entry.to_msx())
@@ -310,7 +282,7 @@ class MSX:
         return {
             "menu": [{
                 "label": "¯\\_(ツ)_/¯",
-                "data": f"{config.MSX_HOST}/msx/error?id={{ID}}"
+                "data": MSX.format_action('/msx/error')
             }],
             "type": "pages",
             "headline": "Ошибка",
@@ -326,7 +298,7 @@ class MSX:
         return {
             "menu": [{
                 "label": "¯\\_(ツ)_/¯",
-                "data": f"{config.MSX_HOST}/msx/too_old?id={{ID}}"
+                "data": MSX.format_action('/msx/too_old')
             }],
             "type": "pages",
             "headline": "Ошибка",
@@ -370,3 +342,61 @@ class MSX:
             return 'content:request:interaction:init@https://msx.benzac.de/interaction/tizen.html'
         else:
             return 'panel:request:player:options'
+
+    @staticmethod
+    def settings_menu():
+        return {
+            "headline": "Настройки",
+            "caption": "/{ico:msx-blue:stop}Настройки",
+            "template": {
+                "enumerate": False,
+                "type": "control",
+                "layout": "0,0,4,1"
+            },
+            "items": [
+                {
+                    "label": "Пункты меню",
+                    'action': '[]',
+                    "selection": {
+                        "action": "update:panel:info",
+                        "data": {
+                            "headline": "Здесь можно выключить или включить разделы главного меню слева."
+                        }
+                    }
+                }, {
+                    "label": "4К",
+                    'action': '[]',
+                    "selection": {
+                        "action": "update:panel:info",
+                        "data": {
+                            "headline": "Выключатель 4К. Если телевизор старый, слабый или дешёвый, то лучше не включать."
+                        }
+                    }
+                }, {
+                    "label": "Прокси для плейлиста",
+                    'action': '[]',
+                    "selection": {
+                        "action": "update:panel:info",
+                        "data": {
+                            "headline": "Включите, если видео не загружаются вообще (нет длительности, нет дорожек и субтитров в настройках плеера)."
+                        }
+                    }
+                },  {
+                    "label": "Справка",
+                    'action': '[]',
+                    "selection": {
+                        "action": "update:panel:info",
+                        "data": {
+                            "headline": "https://github.com/slonopot/kp-msx"
+                        }
+                    }
+                }, {
+                    'type': 'space',
+                    'id': 'info',
+                    'offset': '0,0,4,1',
+                    #"color": "msx-glass",
+                    'headline': '',
+                    'action': '[]',
+                }
+            ]
+        }

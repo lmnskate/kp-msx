@@ -1,4 +1,4 @@
-import config
+from models.MSX import MSX
 
 
 class Genre:
@@ -11,5 +11,6 @@ class Genre:
         return {
             "type": "default",
             "label": self.title,
-            "action": f"content:request:interaction:{config.MSX_HOST}/msx/category?id={{ID}}&category={category}&genre={self.id}&page={{PAGE}}@{config.MSX_HOST}/paging.html"
+            "action": MSX.format_action('/msx/category', params={'category': category, 'genre': self.id, 'page': '{PAGE}'}, interaction='/paging.html', module='content')
+            #"action": f"content:request:interaction:{config.MSX_HOST}/msx/category?id={{ID}}&category={category}&genre={self.id}&page={{PAGE}}@{config.MSX_HOST}/paging.html"
         }

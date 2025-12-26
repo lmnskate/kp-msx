@@ -4,13 +4,15 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.requests import Request
-from starlette.responses import JSONResponse, HTMLResponse, FileResponse
+from starlette.responses import JSONResponse, FileResponse
 
 import config
+from models.MSX import MSX
+from models.Category import Category
 from models.Content import Content
 from models.Device import Device
 from models.KinoPub import KinoPub
-from models.MSX import MSX
+
 
 
 app = FastAPI()
@@ -98,6 +100,10 @@ async def menu(request: Request):
     if categories is None:
         request.state.device.delete()
         return MSX.unregistered_menu()
+    categories += Category.static_categories()
+    for category in categories:
+        if category.id in request.state.device.settings.menu_blacklist:
+            category.blacklisted = True
     return MSX.registered_menu(categories)
 
 
