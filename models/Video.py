@@ -1,5 +1,7 @@
-import config
+from urllib.parse import urlencode
 
+import config
+from util.proxy import remember_domain, make_proxy_url
 
 class Video:
 
@@ -19,16 +21,21 @@ class Video:
 
         self.video = video_files['url'][config.PROTOCOL]
 
-    def to_multivideo_entry(self):
+    def to_multivideo_entry(self, proxy: bool = False):
         entry = {
             "label": self.title,
-            #"playerLabel": self.title,
-            'action': self.msx_action()
+            'action': self.msx_action(proxy=proxy)
         }
         return entry
 
-    def msx_action(self):
-        if config.TIZEN:
-            return f'video:{self.video}'
+    def msx_action(self, proxy: bool = False):
+        if proxy:
+            url = make_proxy_url(self.video)
         else:
-            return f"video:plugin:{config.PLAYER}?url={self.video}"
+            url = self.video
+
+        if config.TIZEN:
+            return f'video:{url}'
+        else:
+            return f"video:plugin:{config.PLAYER}?" + urlencode({'url': url})
+

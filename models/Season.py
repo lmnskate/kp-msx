@@ -13,14 +13,13 @@ class Season:
 
         self.watched = self._watched()
 
-    def to_episode_pages(self):
+    def to_episode_pages(self, proxy: bool = False):
         items = []
         for i, episode in enumerate(self.episodes):
             entry = {
                 "label": episode.menu_title(),
-                #"title": episode.menu_title(),
                 "playerLabel": episode.player_title(),
-                'action': episode.msx_action(),
+                'action': episode.msx_action(proxy=proxy),
                 'stamp': '{ico:check}' if episode.watched else None,
                 'resumeKey': str(self.content_id) + ' ' + episode.player_title(),
                 'triggerReady': episode.trigger_ready(),

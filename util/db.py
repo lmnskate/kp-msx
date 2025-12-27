@@ -7,6 +7,9 @@ client = MongoClient(config.MONGODB_URL)
 devices = client[config.MONGODB_COLLECTION]['devices']
 domains = client[config.MONGODB_COLLECTION]['domains']
 
+devices.create_index(['id'])
+domains.create_index(['domain'])
+
 
 def get_device_by_id(device_id):
     return devices.find_one({'id': device_id})
@@ -34,3 +37,11 @@ def delete_device(id):
 
 def update_device_settings(id, param):
     return devices.update_one({'id': id}, {'$set': {'settings': param}})
+
+
+def get_domain(domain):
+    return domains.find_one({'domain': domain})
+
+def add_domain(domain):
+    domains.insert_one({'domain': domain})
+

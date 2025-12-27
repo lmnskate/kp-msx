@@ -4,14 +4,15 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.requests import Request
-from starlette.responses import JSONResponse, FileResponse
+from starlette.responses import JSONResponse, FileResponse, Response
 
 import config
 from models.Category import Category
 from models.Content import Content
 from models.Device import Device
 from models.KinoPub import KinoPub
-from util import msx
+from util import msx, proxy
+from util.db import devices
 
 app = FastAPI()
 app.add_middleware(
@@ -28,7 +29,8 @@ UNAUTHORIZED = [
     '/subtitleShifter',
     '/paging.html',
     '/paging.js',
-    ENDPOINT + '/start.json'
+    ENDPOINT + '/start.json',
+    ENDPOINT + '/proxy'
 ]
 
 
@@ -174,13 +176,13 @@ async def folder(request: Request):
 @app.get(ENDPOINT + '/content')
 async def content(request: Request):
     result = await request.state.device.kp.get_single_content(request.query_params.get('content_id'))
-    return result.to_msx_panel()
+    return result.to_msx_panel(proxy=request.state.device.settings.proxy)
 
 
 @app.get(ENDPOINT + '/multivideo')
-async def content(request: Request):
+async def content_multivideo(request: Request):
     result = await request.state.device.kp.get_single_content(request.query_params.get('content_id'))
-    return result.to_multivideo_msx_panel()
+    return result.to_multivideo_msx_panel(proxy=request.state.device.settings.proxy)
 
 
 @app.get(ENDPOINT + '/content/bookmarks')
@@ -204,7 +206,7 @@ async def seasons(request: Request):
 @app.get(ENDPOINT + '/episodes')
 async def episodes(request: Request):
     result = await request.state.device.kp.get_single_content(request.query_params.get('content_id'))
-    return result.to_episodes_msx_panel(int(request.query_params.get('season')))
+    return result.to_episodes_msx_panel(int(request.query_params.get('season')), proxy=request.state.device.settings.proxy)
 
 
 @app.get(ENDPOINT + '/search')
@@ -333,6 +335,18 @@ async def error_page(request: Request):
 @app.get(ENDPOINT + '/too_old')
 async def too_old(request: Request):
     return msx.unsupported_version()
+
+# Proxy
+
+@app.get(ENDPOINT + '/proxy')
+async def proxy_req(request: Request):
+    url = request.query_params.get('url')
+    try:
+        proxy.check_url(url)
+        code, content_type, content = await proxy.get(url)
+    except:
+        return Response(status_code=403)
+    return Response(content, code, media_type=content_type)
 
 
 if __name__ == '__main__':

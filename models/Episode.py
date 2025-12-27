@@ -1,5 +1,8 @@
+from urllib.parse import urlencode
+
 import config
 from util import msx
+from util.proxy import make_proxy_url
 
 
 class Episode:
@@ -42,12 +45,16 @@ class Episode:
     def player_title(self):
         return f'[S{self.season}/E{self.n}] {self.title}'
 
-    def msx_action(self):
-        if config.TIZEN:
-            return f'video:{self.video}'
+    def msx_action(self, proxy: bool = False):
+        if proxy:
+            url = make_proxy_url(self.video)
         else:
-            return f'video:plugin:{config.PLAYER}?url={self.video}'
-            #return f'video:plugin:{config.PLAYER}?url={self.video}'
+            url = self.video
+
+        if config.TIZEN:
+            return f'video:{url}'
+        else:
+            return f"video:plugin:{config.PLAYER}?" + urlencode({'url': url})
 
     def trigger_ready(self):
         params = {
