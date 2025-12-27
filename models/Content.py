@@ -1,7 +1,7 @@
 from models.Folder import Folder
-from models.MSX import MSX
 from models.Season import Season
 from models.Video import Video
+from util import msx
 
 
 class Content:
@@ -52,7 +52,7 @@ class Content:
         entry = {
             'title': self.title,
             'image': self.poster,
-            "action": MSX.format_action('/msx/content', params={'content_id': self.id}, module='panel')
+            "action": msx.format_action('/msx/content', params={'content_id': self.id}, module='panel')
             #"action": f"panel:{config.MSX_HOST}/msx/content?id={{ID}}&content_id={self.id}"
         }
         if self.media is not None and self.media.season > 0:
@@ -74,10 +74,10 @@ class Content:
             if len(self.videos) == 1:
                 return self.videos[0].msx_action()
             else:
-                return MSX.format_action('/msx/multivideo', params={'content_id': self.id}, module='panel')
+                return msx.format_action('/msx/multivideo', params={'content_id': self.id}, module='panel')
                 #return f'panel:{config.MSX_HOST}/msx/multivideo?id={{ID}}&content_id={self.id}'
         if self.seasons is not None:
-            return MSX.format_action('/msx/seasons', params={'content_id': self.id}, module='panel')
+            return msx.format_action('/msx/seasons', params={'content_id': self.id}, module='panel')
             #return f"panel:{config.MSX_HOST}/msx/seasons?id={{ID}}&content_id={self.id}"
 
     SUBSCRIPTION_BUTTON_ID = "subscription_button"
@@ -94,7 +94,7 @@ class Content:
             "type": "button",
             "layout": f"6,5,1,1",
             "label": label,
-            'action': MSX.format_action('/msx/toggle_subscription', params={'content_id': self.id}, module='execute'),
+            'action': msx.format_action('/msx/toggle_subscription', params={'content_id': self.id}, module='execute'),
             #'action': f'execute:{config.MSX_HOST}/msx/toggle_subscription?content_id={self.id}&id={{ID}}',
         }
 
@@ -111,7 +111,7 @@ class Content:
             "type": "button",
             "layout": f"7,5,1,1",
             "label": label,
-            'action': MSX.format_action('/msx/content/bookmarks', params={'content_id': self.id}, module='panel')
+            'action': msx.format_action('/msx/content/bookmarks', params={'content_id': self.id}, module='panel')
             #'action': f'panel:{config.MSX_HOST}/msx/content/bookmarks?id={{ID}}&content_id={self.id}'
         }
 
@@ -139,11 +139,11 @@ class Content:
                 'button:content:action': f'player:content',
                 'button:content:enable': f'false',
                 'button:restart:icon': 'settings',
-                'button:restart:action': MSX.player_action_btn(),
+                'button:restart:action': msx.player_action_btn(),
                 'button:speed:icon': 'replay',
                 'button:speed:action': 'player:restart',
                 'resume:key': self.title,
-                'trigger:ready': MSX.format_action('/msx/play', params={'content_id': self.id}, module='execute')
+                'trigger:ready': msx.format_action('/msx/play', params={'content_id': self.id}, module='execute')
                 #'trigger:ready': f'execute:{config.MSX_HOST}/msx/play?content_id={self.id}&id={{ID}}'
             }
         }
@@ -215,7 +215,7 @@ class Content:
                 "label": f"Cезон {season.n}",
                 'stamp': '{ico:check}' if season.watched else None,
                 'focus': not season.watched,
-                "action": MSX.format_action('/msx/episodes', params={'content_id': self.id, 'season': season.n}, module='panel')
+                "action": msx.format_action('/msx/episodes', params={'content_id': self.id, 'season': season.n}, module='panel')
                #"action": f'panel:{config.MSX_HOST}/msx/episodes?id={{ID}}&content_id={self.id}&season={season.n}',
             })
         return entry
@@ -236,11 +236,11 @@ class Content:
                     'button:content:action': f'player:content',
                     'button:content:enable': f'false',
                     'button:restart:icon': 'settings',
-                    'button:restart:action': MSX.player_action_btn(),
+                    'button:restart:action': msx.player_action_btn(),
                     'button:speed:icon': 'replay',
                     'button:speed:action': 'player:restart',
                     'resume:key': self.title,
-                    'trigger:ready': MSX.format_action('/msx/play', params={'content_id': self.id}, module='execute')
+                    'trigger:ready': msx.format_action('/msx/play', params={'content_id': self.id}, module='execute')
                     #'trigger:ready': f'execute:{config.MSX_HOST}/msx/play?content_id={self.id}&id={{ID}}'
                 }
             },
@@ -265,7 +265,7 @@ class Content:
                     'button:content:icon': 'list-alt',
                     'button:content:action': f'player:content',
                     'button:restart:icon': 'settings',
-                    'button:restart:action': MSX.player_action_btn(),
+                    'button:restart:action': msx.player_action_btn(),
                     'button:speed:icon': 'replay',
                     'button:speed:action': 'player:restart',
                     'resume:key': '{context:resumeKey}',
@@ -300,7 +300,7 @@ class Content:
             subentry = {
                 "id": str(folder.id),
                 "label": folder.title,
-                "action": MSX.format_action('/msx/toggle_bookmark', params={'content_id': self.id, 'folder_id': folder.id}, module='execute')
+                "action": msx.format_action('/msx/toggle_bookmark', params={'content_id': self.id, 'folder_id': folder.id}, module='execute')
                 #"action": f'execute:{config.MSX_HOST}/msx/toggle_bookmark?content_id={self.id}&folder_id={folder.id}&id={{ID}}'
             }
             subentry.update(self.to_bookmark_stamp(folder.id))

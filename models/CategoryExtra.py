@@ -1,4 +1,5 @@
 import config
+from util import msx
 
 
 class CategoryExtra:
@@ -17,15 +18,13 @@ class CategoryExtra:
         self.layout = data.get('layout')
 
     def to_msx(self, category):
-        from models.MSX import MSX
-
         self.params.update({'category': category})
 
         return {
             'type': 'button',
             "layout": self.layout,
             'label': self.title,
-            'action': MSX.format_action(self.path, params=self.params, interaction=self.interaction, module='content')
+            'action': msx.format_action(self.path, params=self.params, interaction=self.interaction, module='content')
             # 'action': f'content:request:interaction:{config.MSX_HOST}/msx/category?id={{ID}}&category={category}&extra=fresh&page={{PAGE}}@{config.MSX_HOST}/paging.html'
         }
 

@@ -1,6 +1,5 @@
-import config
 from models.Episode import Episode
-from models.MSX import MSX
+
 
 
 class Season:

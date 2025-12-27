@@ -1,4 +1,5 @@
 import config
+from util import msx
 
 
 class Category:
@@ -38,12 +39,11 @@ class Category:
             self.options = data.get('options')
 
     def to_msx(self):
-        from models.MSX import MSX
         return {
             "type": "default",
             "label": self.title,
             "icon": self.icon,
-            "data": MSX.format_action(self.path, params=self.params, interaction=self.interaction, options=self.options)
+            "data": msx.format_action(self.path, params=self.params, interaction=self.interaction, options=self.options)
             #"data": f"{config.MSX_HOST}/msx/category?id={{ID}}&category={self.id}&page={{PAGE}}@{config.MSX_HOST}/paging.html"
         }
 

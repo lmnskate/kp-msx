@@ -1,5 +1,5 @@
 import config
-from models.MSX import MSX
+from util import msx
 
 
 class Episode:
@@ -55,7 +55,7 @@ class Episode:
             'season': self.season,
             'episode': self.n
         }
-        return MSX.format_action('/msx/play', params=params, module='execute')
+        return msx.format_action('/msx/play', params=params, module='execute')
         #return f'execute:{config.MSX_HOST}/msx/play?{urlencode(params)}&id={{ID}}'
 
 

@@ -7,13 +7,11 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, FileResponse
 
 import config
-from models.MSX import MSX
 from models.Category import Category
 from models.Content import Content
 from models.Device import Device
 from models.KinoPub import KinoPub
-
-
+from util import msx
 
 app = FastAPI()
 app.add_middleware(
@@ -52,7 +50,7 @@ async def auth(request: Request, call_next):
         return result
 
     if device_id == '{ID}' and str(request.url.path) not in UNAUTHORIZED:
-        result = JSONResponse(MSX.unsupported_version())
+        result = JSONResponse(msx.unsupported_version())
         result.headers['Access-Control-Allow-Credentials'] = 'true'
         result.headers['Access-Control-Allow-Origin'] = '*'
         return result
@@ -63,12 +61,13 @@ async def auth(request: Request, call_next):
     try:
         result = await call_next(request)
     except Exception as e:
-        result = JSONResponse(MSX.handle_exception())
+        result = JSONResponse(msx.handle_exception())
         result.headers['Access-Control-Allow-Credentials'] = 'true'
         result.headers['Access-Control-Allow-Origin'] = '*'
         traceback.print_exc()
     return result
 
+# Static files
 
 @app.get('/')
 async def index(request: Request):
@@ -88,43 +87,44 @@ async def subtitle_editor(request: Request):
 
 @app.get(ENDPOINT + '/start.json')
 async def start(request: Request):
-    return MSX.start()
+    return msx.start()
 
+# General endpoints
 
 @app.get(ENDPOINT + '/menu')
 async def menu(request: Request):
     if not request.state.device.registered():
-        return MSX.unregistered_menu()
+        return msx.unregistered_menu()
 
     categories = await request.state.device.kp.get_content_categories()
     if categories is None:
         request.state.device.delete()
-        return MSX.unregistered_menu()
+        return msx.unregistered_menu()
     categories += Category.static_categories()
     for category in categories:
         if category.id in request.state.device.settings.menu_blacklist:
             category.blacklisted = True
-    return MSX.registered_menu(categories)
+    return msx.registered_menu(categories)
 
 
 @app.get(ENDPOINT + '/registration')
 async def registration(request: Request):
     if request.state.device.registered():
-        return MSX.already_registered()
+        return msx.already_registered()
     else:
         user_code, device_code = await KinoPub.get_codes()
         request.state.device.update_code(device_code)
-        return MSX.registration(user_code)
+        return msx.registration(user_code)
 
 
 @app.post(ENDPOINT + '/check_registration')
 async def check_registration(request: Request):
     result = await KinoPub.check_registration(request.state.device.code)
     if result is None:
-        return MSX.code_not_entered()
+        return msx.code_not_entered()
     request.state.device.update_tokens(result['access_token'], result['refresh_token'])
     await request.state.device.notify()
-    return MSX.restart()
+    return msx.restart()
 
 
 @app.get(ENDPOINT + '/category')
@@ -134,7 +134,7 @@ async def category(request: Request):
     extra = request.query_params.get('extra')
     genre = request.query_params.get('genre')
     result = await request.state.device.kp.get_content(category=cat, page=page, extra=extra, genre=genre)
-    result = MSX.content(result, cat, page, extra=(extra or genre))
+    result = msx.content(result, cat, page, extra=(extra or genre))
     return result
 
 
@@ -142,7 +142,7 @@ async def category(request: Request):
 async def category(request: Request):
     cat = request.query_params.get('category')
     result = await request.state.device.kp.get_genres(category=cat)
-    result = MSX.genre_folders(cat, result)
+    result = msx.genre_folders(cat, result)
     return result
 
 
@@ -150,7 +150,7 @@ async def category(request: Request):
 async def bookmarks(request: Request):
     result = await request.state.device.kp.get_bookmark_folders()
 
-    result = MSX.bookmark_folders(result)
+    result = msx.bookmark_folders(result)
     return result
 
 
@@ -158,7 +158,7 @@ async def bookmarks(request: Request):
 async def bookmarks(request: Request):
     result = await request.state.device.kp.get_tv()
 
-    result = MSX.tv_channels(result)
+    result = msx.tv_channels(result)
     return result
 
 
@@ -167,7 +167,7 @@ async def folder(request: Request):
     page = int(request.query_params.get('page'))
     f = request.query_params.get('folder')
     result = await request.state.device.kp.get_bookmark_folder(f, page=page)
-    result = MSX.content(result, "folder", page, extra="wtf")
+    result = msx.content(result, "folder", page, extra="wtf")
     return result
 
 
@@ -210,7 +210,7 @@ async def episodes(request: Request):
 @app.get(ENDPOINT + '/search')
 async def search(request: Request):
     result = await request.state.device.kp.search(request.query_params.get('q'))
-    result = MSX.content(result, "search", 1, extra=request.query_params.get('q'), decompress=False)
+    result = msx.content(result, "search", 1, extra=request.query_params.get('q'), decompress=False)
     return result
 
 
@@ -218,14 +218,14 @@ async def search(request: Request):
 async def history(request: Request):
     page = int(request.query_params.get('page'))
     result = await request.state.device.kp.get_history(page=page)
-    result = MSX.content(result, "history", page, extra="wtf")
+    result = msx.content(result, "history", page, extra="wtf")
     return result
 
 
 @app.get(ENDPOINT + '/watching')
 async def watching(request: Request):
     result = await request.state.device.kp.get_watching(subscribed=1)
-    result = MSX.content(result, "watching", 0, extra='wtf')
+    result = msx.content(result, "watching", 0, extra='wtf')
     return result
 
 
@@ -250,7 +250,7 @@ async def play(request: Request):
         if not result.watched:
             await request.state.device.kp.toggle_watched(content_id)
 
-    return MSX.empty_response()
+    return msx.empty_response()
 
 
 @app.post(ENDPOINT + '/toggle_subscription')
@@ -258,7 +258,7 @@ async def toggle_subscription(request: Request):
     content_id = request.query_params.get('content_id')
     await request.state.device.kp.toggle_subscription(content_id)
     result = await request.state.device.kp.get_single_content(content_id)
-    return MSX.update_panel(Content.SUBSCRIPTION_BUTTON_ID, result.to_subscription_button())
+    return msx.update_panel(Content.SUBSCRIPTION_BUTTON_ID, result.to_subscription_button())
 
 
 @app.post(ENDPOINT + '/toggle_bookmark')
@@ -272,17 +272,36 @@ async def toggle_bookmark(request: Request):
     result.update_bookmarks(content_folders)
 
     upd = result.to_bookmark_stamp(folder_id)
-    return MSX.update_panel(str(folder_id), upd)
+    return msx.update_panel(str(folder_id), upd)
 
+# Settings
+
+@app.get(ENDPOINT + '/settings/menu_entries')
+async def menu_entries(request: Request):
+    pass
+
+@app.post(ENDPOINT + '/settings/toggle_4k')
+async def settings_toggle_4k(request: Request):
+    await request.state.device.toggle_4k()
+
+@app.post(ENDPOINT + '/settings/toggle_proxy')
+async def settings_toggle_proxy(request: Request):
+    await request.state.device.toggle_proxy()
+
+@app.post(ENDPOINT + '/settings/toggle_menu_entry_blacklist')
+async def settings_toggle_menu_entry_blacklist(request: Request):
+    entry = request.query_params.get('entry')
+    await request.state.device.toggle_proxy()
+
+# Errors
 
 @app.get(ENDPOINT + '/error')
 async def error_page(request: Request):
-    return MSX.handle_exception(error_page=True)
-
+    return msx.handle_exception(error_page=True)
 
 @app.get(ENDPOINT + '/too_old')
 async def too_old(request: Request):
-    return MSX.unsupported_version()
+    return msx.unsupported_version()
 
 
 if __name__ == '__main__':
