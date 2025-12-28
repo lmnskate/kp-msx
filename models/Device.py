@@ -12,6 +12,7 @@ class Device:
         self.refresh = data.get('refresh')
         self.kp = KinoPub(self.token, self.refresh)
         self.settings = DeviceSettings(data.get('settings'))
+        self.user_agent = data.get('user_agent')
 
     def registered(self):
         if self.token is not None:
@@ -111,3 +112,5 @@ class Device:
         self.settings.menu_blacklist = []
         self.update_settings()
 
+    def update_user_agent(self, user_agent):
+        db.update_device_user_agent(self.id, user_agent)

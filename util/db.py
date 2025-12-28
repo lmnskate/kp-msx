@@ -26,6 +26,8 @@ def update_device_code(id, code):
 def update_device_tokens(id, token, refresh):
     return devices.update_one({'id': id}, {'$set': {'token': token, 'refresh': refresh}})
 
+def update_device_user_agent(id, user_agent):
+    return devices.update_one({'id': id}, {'$set': {'user_agent': user_agent}})
 
 def update_tokens(token, param, param1):
     return devices.update_one({'token': token}, {'$set': {'token': param, 'refresh': param1}})

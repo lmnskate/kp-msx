@@ -60,6 +60,8 @@ async def auth(request: Request, call_next):
     request.state.device = Device.by_id(device_id)
     if request.state.device is None and device_id is not None:
         request.state.device = Device.create(device_id)
+    if request.state.device is not None and request.state.device.user_agent is None and (ua := request.headers.get('user-agent')) is not None:
+        request.state.device.update_user_agent(ua)
     try:
         result = await call_next(request)
     except Exception as e:
