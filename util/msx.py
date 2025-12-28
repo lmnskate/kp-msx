@@ -1,5 +1,6 @@
 from urllib.parse import urlencode
 import config
+from config import ALTERNATIVE_PLAYER
 from models.DeviceSettings import DeviceSettings
 
 LENNY =  "¯\\_(ツ)_/¯"
@@ -239,7 +240,7 @@ def empty_response():
     }
 
 
-def tv_channels(channels):
+def tv_channels(channels, proxy: bool = False, alternative_player: bool = False):
     resp = {
         "type": "list",
         'header': {
@@ -267,7 +268,7 @@ def tv_channels(channels):
                 'progress:display': 'false'
             }
         },
-        "items": [channel.to_msx() for channel in channels]
+        "items": [channel.to_msx(proxy=proxy, alternative_player=alternative_player) for channel in channels]
     }
 
     return resp
@@ -375,6 +376,7 @@ HEVC_ID = 'hevc'
 MIXED_PLAYLIST_ID = 'mixed_playlist'
 SERVER_ID = 'server'
 PROXY_ID = 'proxy'
+ALTERNATIVE_PLAYER_ID = 'alternative_player'
 MENU_ID = 'menu'
 HELP_ID = 'help'
 
@@ -394,12 +396,15 @@ def settings_menu(device_settings: 'DeviceSettings'):
             device_settings.to_mixed_playlist_msx_button(),
             device_settings.to_server_msx_button(),
             device_settings.to_proxy_msx_button(),
+            device_settings.to_alternative_player_msx_button(),
             device_settings.to_menu_msx_button(),
             device_settings.to_help_msx_button(),
             {
+                "position": "context:context1",
                 'type': 'space',
                 'id': 'info',
-                'offset': '0,0,4,1',
+                'offset': '-4,1,4,1',
+                #'offset': '0,0,4,1',
                 'headline': '',
                 'action': '[]',
             }

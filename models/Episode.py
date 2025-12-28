@@ -45,16 +45,21 @@ class Episode:
     def player_title(self):
         return f'[S{self.season}/E{self.n}] {self.title}'
 
-    def msx_action(self, proxy: bool = False):
+    def msx_action(self, proxy: bool = False, alternative_player: bool = False):
         if proxy:
             url = make_proxy_url(self.video)
         else:
             url = self.video
 
+        if alternative_player:
+            player = config.ALTERNATIVE_PLAYER
+        else:
+            player = config.PLAYER
+
         if config.TIZEN:
             return f'video:{url}'
         else:
-            return f"video:plugin:{config.PLAYER}?" + urlencode({'url': url})
+            return f"video:plugin:{player}?" + urlencode({'url': url})
 
     def trigger_ready(self):
         params = {

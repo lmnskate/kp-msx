@@ -1,4 +1,7 @@
+from urllib.parse import urlencode
+
 import config
+from util.proxy import make_proxy_url
 
 
 class Channel:
@@ -11,11 +14,22 @@ class Channel:
         self.logo = logos.get('l') or logos.get('m') or logos.get('s')
         self.stream = data.get('stream')
 
-    def to_msx(self):
+    def to_msx(self, proxy: bool = False, alternative_player: bool = False):
+        if proxy:
+            url = make_proxy_url(self.stream)
+        else:
+            url = self.stream
+
+        if alternative_player:
+            player = config.ALTERNATIVE_PLAYER
+        else:
+            player = config.PLAYER
+
         if config.TIZEN:
             action = f'video:{self.stream}'
         else:
-            action = f"video:plugin:{config.PLAYER}?url={self.stream}"
+            action = f"video:plugin:{player}?" + urlencode({'url': url})
+
         entry = {
             'title': self.title,
             'playerLabel': self.title,

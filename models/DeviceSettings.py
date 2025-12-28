@@ -11,6 +11,7 @@ class DeviceSettings:
         self.menu_blacklist = data.get('menu_blacklist', [])
         self.fourk = data.get('fourk', False)
         self.proxy = data.get('proxy', False)
+        self.alternative_player = data.get('alternative_player', False)
         self.hevc = data.get('hevc', False)
         self.hdr = data.get('hdr', False)
         self.mixed_playlist = data.get('mixed_playlist', False)
@@ -21,6 +22,7 @@ class DeviceSettings:
             'menu_blacklist': self.menu_blacklist,
             'fourk': self.fourk,
             'proxy': self.proxy,
+            'alternative_player': self.alternative_player,
             'hevc': self.hevc,
             'hdr': self.hdr,
             'mixed_playlist': self.mixed_playlist,
@@ -80,6 +82,15 @@ class DeviceSettings:
         entry.update(msx.stamp(self.proxy))
         return entry
 
+    def to_alternative_player_msx_button(self):
+        entry = msx.settings_button(
+            msx.ALTERNATIVE_PLAYER_ID, 'Альтернативный плеер',
+            msx.format_action(f'/msx/settings/toggle/{msx.ALTERNATIVE_PLAYER_ID}', module='execute'),
+            "Включите, если телевизор очень старый (Tizen или webOS до 3 версии, год выпуска ТВ до 2018 года)."
+        )
+        entry.update(msx.stamp(self.alternative_player))
+        return entry
+
     def to_menu_msx_button(self):
         entry = msx.settings_button(
             msx.MENU_ID, 'Пункты меню',
@@ -93,8 +104,8 @@ class DeviceSettings:
             msx.HELP_ID, 'Справка','[]',
             "Исходный код: https://github.com/slonopot/kp-msx\n"
             f"Плеер: {config.PLAYER}\n"
-            f"Протокол: {config.PROTOCOL}\n"
-            "Настроек Video.js/HLS.js или выбора HTTP/HLS стрима здесь нет."
+            f"Альтернативный плеер: {config.ALTERNATIVE_PLAYER}\n"
+            f"Протокол: {config.PROTOCOL}"
         )
         return entry
 

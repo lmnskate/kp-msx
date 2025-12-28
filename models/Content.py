@@ -68,10 +68,10 @@ class Content:
             entry['titleFooter'] = entry['titleFooter'].strip()
         return entry
 
-    def msx_action(self, proxy: bool = False):
+    def msx_action(self, proxy: bool = False, alternative_player: bool = False):
         if self.videos is not None:
             if len(self.videos) == 1:
-                return self.videos[0].msx_action(proxy=proxy)
+                return self.videos[0].msx_action(proxy=proxy, alternative_player=alternative_player)
             else:
                 return msx.format_action('/msx/multivideo', params={'content_id': self.id}, module='panel')
         if self.seasons is not None:
@@ -112,7 +112,7 @@ class Content:
 
         return button
 
-    def to_msx_panel(self, proxy: bool = False):
+    def to_msx_panel(self, proxy: bool = False, alternative_player: bool = False):
         buttons = []
 
         if self.seasons:
@@ -127,7 +127,7 @@ class Content:
             "label": "Смотреть",
             "playerLabel": self.title,
             'focus': True,
-            'action': self.msx_action(proxy=proxy),
+            'action': self.msx_action(proxy=proxy, alternative_player=alternative_player),
             'properties': {
                 'control:type': 'extended',
                 'button:content:icon': 'list-alt',
@@ -213,7 +213,7 @@ class Content:
             })
         return entry
 
-    def to_multivideo_msx_panel(self, proxy: bool = False):
+    def to_multivideo_msx_panel(self, proxy: bool = False, alternative_player: bool = False):
         entry = {
             "type": "list",
             "headline": self.title,
@@ -236,11 +236,11 @@ class Content:
                     'trigger:ready': msx.format_action('/msx/play', params={'content_id': self.id}, module='execute')
                 }
             },
-            "items": [i.to_multivideo_entry(proxy=proxy) for i in self.videos]
+            "items": [i.to_multivideo_entry(proxy=proxy, alternative_player=alternative_player) for i in self.videos]
         }
         return entry
 
-    def to_episodes_msx_panel(self, season_number, proxy: bool = False):
+    def to_episodes_msx_panel(self, season_number, proxy: bool = False, alternative_player: bool = False):
         for season in self.seasons:
             if season.n == season_number:
                 break
@@ -263,7 +263,7 @@ class Content:
                     'trigger:ready': '{context:triggerReady}'
                 }
             },
-            "items": season.to_episode_pages(proxy=proxy)
+            "items": season.to_episode_pages(proxy=proxy, alternative_player=alternative_player)
         }
         return entry
 

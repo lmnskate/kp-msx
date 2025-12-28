@@ -79,6 +79,10 @@ class Device:
         self.settings.proxy = not self.settings.proxy
         self.update_settings()
 
+    async def toggle_alternative_player(self):
+        self.settings.alternative_player = not self.settings.alternative_player
+        self.update_settings()
+
     async def toggle_server(self) -> str:
         device_info = await self.kp.get_current_device_info()
         available_servers = await self.kp.get_available_servers()

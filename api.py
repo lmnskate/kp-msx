@@ -160,7 +160,11 @@ async def bookmarks(request: Request):
 async def bookmarks(request: Request):
     result = await request.state.device.kp.get_tv()
 
-    result = msx.tv_channels(result)
+    result = msx.tv_channels(
+        result,
+        proxy=request.state.device.settings.proxy,
+        alternative_player=request.state.device.settings.alternative_player
+    )
     return result
 
 
@@ -176,13 +180,19 @@ async def folder(request: Request):
 @app.get(ENDPOINT + '/content')
 async def content(request: Request):
     result = await request.state.device.kp.get_single_content(request.query_params.get('content_id'))
-    return result.to_msx_panel(proxy=request.state.device.settings.proxy)
+    return result.to_msx_panel(
+        proxy=request.state.device.settings.proxy,
+        alternative_player=request.state.device.settings.alternative_player
+    )
 
 
 @app.get(ENDPOINT + '/multivideo')
 async def content_multivideo(request: Request):
     result = await request.state.device.kp.get_single_content(request.query_params.get('content_id'))
-    return result.to_multivideo_msx_panel(proxy=request.state.device.settings.proxy)
+    return result.to_multivideo_msx_panel(
+        proxy=request.state.device.settings.proxy,
+        alternative_player=request.state.device.settings.alternative_player
+    )
 
 
 @app.get(ENDPOINT + '/content/bookmarks')
@@ -206,7 +216,11 @@ async def seasons(request: Request):
 @app.get(ENDPOINT + '/episodes')
 async def episodes(request: Request):
     result = await request.state.device.kp.get_single_content(request.query_params.get('content_id'))
-    return result.to_episodes_msx_panel(int(request.query_params.get('season')), proxy=request.state.device.settings.proxy)
+    return result.to_episodes_msx_panel(
+        int(request.query_params.get('season')),
+        proxy=request.state.device.settings.proxy,
+        alternative_player=request.state.device.settings.alternative_player
+    )
 
 
 @app.get(ENDPOINT + '/search')
@@ -310,6 +324,9 @@ async def settings_toggle_proxy(request: Request, setting: str):
         case msx.PROXY_ID:
             await request.state.device.toggle_proxy()
             return msx.update_panel(msx.PROXY_ID, msx.stamp(request.state.device.settings.proxy))
+        case msx.ALTERNATIVE_PLAYER_ID:
+            await request.state.device.toggle_alternative_player()
+            return msx.update_panel(msx.ALTERNATIVE_PLAYER_ID, msx.stamp(request.state.device.settings.alternative_player))
         case _:
             return msx.empty_response()
 
@@ -343,10 +360,10 @@ async def proxy_req(request: Request):
     url = request.query_params.get('url')
     try:
         proxy.check_url(url)
-        code, content_type, content = await proxy.get(url)
+        code, content_type, contents = await proxy.get(url)
     except:
         return Response(status_code=403)
-    return Response(content, code, media_type=content_type)
+    return Response(contents, code, media_type=content_type)
 
 
 if __name__ == '__main__':
