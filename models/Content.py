@@ -142,6 +142,10 @@ class Content:
             }
         }
 
+        if self.videos is not None and len(self.videos) == 1 and alternative_player:
+            for st in self.videos[0].subtitles:
+                watch_button['properties'].update(st.to_msx_properties(proxy=proxy))
+
         buttons = [watch_button] + buttons
 
         stamp = ''
