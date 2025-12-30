@@ -12,7 +12,6 @@ from models.Content import Content
 from models.Device import Device
 from models.KinoPub import KinoPub
 from util import msx, proxy
-from util.db import devices
 
 app = FastAPI()
 app.add_middleware(
@@ -370,4 +369,3 @@ async def proxy_req(request: Request):
 
 if __name__ == '__main__':
     uvicorn.run(app, host='0.0.0.0', port=int(config.PORT))
-

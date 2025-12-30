@@ -4,6 +4,8 @@ import os
 MSX_HOST = os.environ.get('RENDER_EXTERNAL_URL') or os.environ.get('MSX_HOST')
 MONGODB_URL = os.environ.get('MONGODB_URL')
 MONGODB_COLLECTION = os.environ.get('MONGODB_COLLECTION') or 'kp'
+SQLITE_URL = os.environ.get('SQLITE_URL') or './kp-sqlite.db'
+IS_SQLITE = (MONGODB_URL is None or len(MONGODB_URL) == 0) and len(SQLITE_URL) > 0
 PORT = os.environ.get('PORT') or 10000
 PLAYER = os.environ.get('PLAYER') or 'https://slonopot.github.io/msx-hlsx/hlsx.html'
 ALTERNATIVE_PLAYER = os.environ.get('ALTERNATIVE_PLAYER') or 'http://msx.benzac.de/plugins/html5x.html'

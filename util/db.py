@@ -1,49 +1,36 @@
-from pymongo import MongoClient
-
 import config
 
-client = MongoClient(config.MONGODB_URL)
-
-devices = client[config.MONGODB_COLLECTION]['devices']
-domains = client[config.MONGODB_COLLECTION]['domains']
-
-devices.create_index(['id'])
-domains.create_index(['domain'])
-
+if config.IS_SQLITE:
+  import util.db_sqlite as db
+else:
+  import util.db_mongo as db
 
 def get_device_by_id(device_id):
-    return devices.find_one({'id': device_id})
-
+    return db.get_device_by_id(device_id)
 
 def create_device(entry):
-    return devices.insert_one(entry)
-
+    return db.create_device(entry)
 
 def update_device_code(id, code):
-    return devices.update_one({'id': id}, {'$set': {'code': code}})
-
+    return db.update_device_code(id, code)
 
 def update_device_tokens(id, token, refresh):
-    return devices.update_one({'id': id}, {'$set': {'token': token, 'refresh': refresh}})
+    return db.update_device_tokens(id, token, refresh)
 
 def update_device_user_agent(id, user_agent):
-    return devices.update_one({'id': id}, {'$set': {'user_agent': user_agent}})
-
-def update_tokens(token, param, param1):
-    return devices.update_one({'token': token}, {'$set': {'token': param, 'refresh': param1}})
-
-
-def delete_device(id):
-    return devices.delete_one({'id': id})
-
+    return db.update_device_user_agent(id, user_agent)
 
 def update_device_settings(id, param):
-    return devices.update_one({'id': id}, {'$set': {'settings': param}})
-
+    return db.update_device_settings(id, param)
 
 def get_domain(domain):
-    return domains.find_one({'domain': domain})
+    return db.get_domain(domain)
 
 def add_domain(domain):
-    domains.insert_one({'domain': domain})
+    return db.add_domain(domain)
 
+def update_tokens(token, newToken, refresh):
+    return db.update_tokens(token, newToken, refresh)
+
+def delete_device(id):
+    return db.delete_device(id)
