@@ -107,7 +107,7 @@ async def menu(request: Request):
     for category in categories:
         if category.id in request.state.device.settings.menu_blacklist:
             category.blacklisted = True
-    return msx.registered_menu(categories, request.state.device.settings)
+    return msx.registered_menu(categories)
 
 
 @app.get(ENDPOINT + '/registration')
@@ -292,6 +292,12 @@ async def toggle_bookmark(request: Request):
     return msx.update_panel(str(folder_id), upd)
 
 # Settings
+
+
+@app.get(ENDPOINT + '/settings')
+async def settings(request: Request):
+    return msx.settings_menu(request.state.device.settings)
+
 
 @app.get(ENDPOINT + '/settings/menu_entries')
 async def menu_entries(request: Request):

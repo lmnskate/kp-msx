@@ -66,7 +66,7 @@ def unregistered_menu():
     }
 
 
-def registered_menu(categories: 'List[Category]', device_settings: 'DeviceSettings'):
+def registered_menu(categories: 'List[Category]'):
     menu = [category.to_msx() for category in categories or [] if not category.blacklisted]
     if len(menu) == 0:
         menu = [sad_screen()]
@@ -76,7 +76,7 @@ def registered_menu(categories: 'List[Category]', device_settings: 'DeviceSettin
         "restore": False,
         "refocus": 1,
         "headline": "kino.pub",
-        "options": settings_menu(device_settings),
+        "options": settings_screen(),
         "menu": menu,
     }
     return entry
@@ -370,6 +370,34 @@ def player_action_btn():
         return 'panel:request:player:options'
 
 
+def settings_screen():
+    return {
+        "headline": "Настройки",
+        "caption": "/{ico:msx-blue:stop}Настройки",
+        "template": {
+            "enumerate": False,
+            "type": "control",
+            "layout": "0,0,8,1"
+        },
+        "items": [
+            {
+                "label": 'Настройки kino.pub',
+                'action': format_action('/msx/settings', module='panel'),
+                'icon': 'movie-filter',
+                'restore': False
+            }, {
+                "label": 'Настройки Media Station X',
+                'action': 'settings',
+                'icon': 'settings'
+            }, {
+                "label": 'Перезапустить приложение',
+                'action': 'reload',
+                'icon': 'restart-alt'
+            },
+        ]
+    }
+
+
 FOURK_ID = 'fourk'
 HDR_ID = 'hdr'
 HEVC_ID = 'hevc'
@@ -382,8 +410,8 @@ HELP_ID = 'help'
 
 def settings_menu(device_settings: 'DeviceSettings'):
     return {
-        "headline": "Настройки",
-        "caption": "/{ico:msx-blue:stop}Настройки",
+        "headline": "Настройки kino.pub",
+        #"caption": "/{ico:msx-blue:stop}Настройки",
         "template": {
             "enumerate": False,
             "type": "control",
