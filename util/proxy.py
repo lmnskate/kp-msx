@@ -1,3 +1,4 @@
+from re import RegexFlag
 from urllib.parse import urlparse, urlencode
 import aiohttp
 import config
@@ -34,10 +35,11 @@ def rewrite_domain(url: str, content: str) -> str:
     prefix = domain_info.scheme + '://' + domain_info.netloc
 
     def _d(x: re.Match):
-        u = f'{config.MSX_HOST}/msx/proxy?' + urlencode({'url': prefix + '/' + x.group(1)})
-        return f'URI="{u}"'
+        a, b, c = x.groups()
+        r = f'{config.MSX_HOST}/msx/proxy?' + urlencode({'url': prefix + '/' + b})
+        return a + r + c
 
-    content = re.sub('URI="/(.*)"', lambda x: _d(x), content)
+    content = re.sub('(^|URI=")/(.*?)($|")', lambda x: _d(x), content, flags=RegexFlag.MULTILINE)
     return content
 
 
@@ -50,3 +52,4 @@ async def get(url):
             text_content = rewrite_domain(url, text_content)
             content = text_content.encode('utf-8')
         return response.status, response.headers.get('content-type'), content
+
