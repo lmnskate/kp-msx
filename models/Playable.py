@@ -33,26 +33,16 @@ class Playable:
         if not self.video_url:
             return "warn:Почему-то нет видео"
 
-        url = make_proxy_url(self.video_url) if proxy else self.video_url
-        player = config.ALTERNATIVE_PLAYER if alternative_player else config.PLAYER
-
-        if config.TIZEN:
-            return f'video:{url}'
-        else:
-            return f"video:plugin:{player}?" + urlencode({'url': url})
+        return msx.play_action(self.video_url, proxy=proxy, alternative_player=alternative_player)
 
     def msx_properties(self, proxy: bool = False, alternative_player: bool = False):
         props = {
-            'control:type': 'extended',
-            'button:content:icon': 'list-alt',
-            'button:content:action': f'player:content',
-            'button:restart:icon': 'settings',
             'button:restart:action': msx.player_action_btn(),
-            'button:speed:icon': 'replay',
-            'button:speed:action': 'player:restart',
             'resume:key': self.resume_key(),
             'trigger:ready': self.trigger_ready()
         }
+
+        props.update(msx.DEFAULT_PLAY_BUTTON_PROPS)
 
         if alternative_player:
             for track in self.subtitles:

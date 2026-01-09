@@ -45,6 +45,8 @@ class Content:
 
         self.new_episodes = data.get('new')
 
+        self.trailer = data.get('trailer', {}).get('url')
+
     def update_bookmarks(self, folders):
         self.bookmarks = [i.id for i in folders]
 
@@ -80,6 +82,7 @@ class Content:
     SUBSCRIPTION_BUTTON_ID = "subscription_button"
     BOOKMARK_BUTTON_ID = "bookmark_button"
     WATCH_BUTTON_ID = "watch_button"
+    TRAILER_BUTTON_ID = "trailer_button"
 
     def to_subscription_button(self):
         if self.subscribed:
@@ -112,19 +115,40 @@ class Content:
 
         return button
 
+
+    def to_trailer_button(self, qty, proxy: bool = False, alternative_player: bool = False):
+        props = {
+            'trigger:background': 'player:button:eject:execute'
+        }
+
+        props.update(msx.DEFAULT_PLAY_BUTTON_PROPS)
+
+        button = {
+            "id": self.TRAILER_BUTTON_ID,
+            "type": "button",
+            "layout": f"{7-qty},5,1,1",
+            "label": '{ico:msx-white:movie}',
+            "playerLabel": f'Трейлер {self.title}',
+            'properties': props,
+            'action': msx.play_action(self.trailer, proxy=proxy, alternative_player=alternative_player),
+        }
+
+        return button
+
     def to_msx_panel(self, proxy: bool = False, alternative_player: bool = False):
-        buttons = []
+        buttons = [self.to_bookmark_button()]
 
         if self.seasons:
             buttons.append(self.to_subscription_button())
 
-        buttons.append(self.to_bookmark_button())
+        if self.trailer:
+            buttons.append(self.to_trailer_button(len(buttons), proxy=proxy, alternative_player=alternative_player))
 
         watch_button = {
             "id": self.WATCH_BUTTON_ID,
             "type": "button",
-            "layout": f"4,5,{4-len(buttons)},1",
-            "label": "Смотреть",
+            "layout": "4,5,2,1" if len(buttons) == 2 else "4,5,1,1",
+            "label": "Смотреть" if len(buttons) == 2 else "{ico:msx-white:play-circle-outline}",
             "playerLabel": self.title,
             'focus': True,
             'action': self.msx_action(proxy=proxy, alternative_player=alternative_player),

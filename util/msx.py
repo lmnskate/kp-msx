@@ -2,10 +2,20 @@ from urllib.parse import urlencode
 import config
 from config import ALTERNATIVE_PLAYER
 from models.DeviceSettings import DeviceSettings
+from util.proxy import make_proxy_url
 
 LENNY =  "¯\\_(ツ)_/¯"
 SAD_LENNY = "(◡︵◡)"
 
+
+DEFAULT_PLAY_BUTTON_PROPS = {
+    'control:type': 'extended',
+    'button:content:icon': 'list-alt',
+    'button:content:action': f'player:content',
+    'button:restart:icon': 'settings',
+    'button:speed:icon': 'replay',
+    'button:speed:action': 'player:restart',
+}
 
 def format_action(path: str, params: dict = None, interaction: str = None, options: str = None, module: str = None):
     if params is None:
@@ -474,3 +484,12 @@ def menu_entries_settings_panel(categories: 'List[Category]'):
             },
             "items": [i.to_msx_settings_button() for i in categories if not i.ignored]
         }
+
+def play_action(video_url, proxy: bool = False, alternative_player: bool = False):
+    url = make_proxy_url(video_url) if proxy else video_url
+    player = config.ALTERNATIVE_PLAYER if alternative_player else config.PLAYER
+
+    if config.TIZEN:
+        return f'video:{url}'
+    else:
+        return f"video:plugin:{player}?" + urlencode({'url': url})
