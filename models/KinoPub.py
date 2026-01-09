@@ -81,6 +81,10 @@ class KinoPub:
             return None
         return [Folder(i) for i in result['items']]
 
+    async def create_bookmark_folder(self, name: str = 'Мои закладки'):
+        req = {'title': name}
+        result = await self.api(f'/bookmarks/create', req, method='POST')
+
     async def get_content_folders(self, content_id):
         req = {'item': content_id}
         result = await self.api(f'/bookmarks/get-item-folders', req)
@@ -88,8 +92,8 @@ class KinoPub:
             return None
         return [Folder(i) for i in result['folders']]
 
-    async def get_bookmark_folder(self, id, page=1):
-        result = await self.api(f'/bookmarks/{id}', {'page': page})
+    async def get_bookmark_folder(self, folder_id, page=1):
+        result = await self.api(f'/bookmarks/{folder_id}', {'page': page})
         if result is None:
             return None
         try:

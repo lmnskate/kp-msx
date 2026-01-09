@@ -153,6 +153,10 @@ async def category(request: Request):
 async def bookmarks(request: Request):
     result = await request.state.device.kp.get_bookmark_folders()
 
+    if len(result) == 0:
+        await request.state.device.kp.create_bookmark_folder()
+        result = await request.state.device.kp.get_bookmark_folders()
+
     result = msx.bookmark_folders(result)
     return result
 
@@ -204,6 +208,11 @@ async def content_bookmarks(request: Request):
     result.update_bookmarks(content_folders)
 
     folders = await request.state.device.kp.get_bookmark_folders()
+
+    if len(folders) == 0:
+        await request.state.device.kp.create_bookmark_folder()
+        folders = await request.state.device.kp.get_bookmark_folders()
+
     return result.to_bookmarks_msx_panel(folders)
 
 
