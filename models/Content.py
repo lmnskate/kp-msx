@@ -147,8 +147,8 @@ class Content:
         watch_button = {
             "id": self.WATCH_BUTTON_ID,
             "type": "button",
-            "layout": "4,5,2,1" if len(buttons) == 2 else "4,5,1,1",
-            "label": "Смотреть" if len(buttons) == 2 else "{ico:msx-white:play-circle-outline}",
+            "layout": f"4,5,{4-len(buttons)},1",
+            "label": "Смотреть" if len(buttons) <= 2 else "{ico:msx-white:play-circle-outline}",
             "playerLabel": self.title,
             'focus': True,
             'action': self.msx_action(proxy=proxy, alternative_player=alternative_player),
