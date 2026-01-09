@@ -45,7 +45,7 @@ class Content:
 
         self.new_episodes = data.get('new')
 
-        self.trailer = data.get('trailer', {}).get('url')
+        self.trailer = (data.get('trailer') or {}).get('url')
 
     def update_bookmarks(self, folders):
         self.bookmarks = [i.id for i in folders]
