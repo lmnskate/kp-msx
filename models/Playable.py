@@ -37,7 +37,6 @@ class Playable:
 
     def msx_properties(self, proxy: bool = False, alternative_player: bool = False):
         props = {
-            'button:restart:action': msx.player_action_btn(),
             'resume:key': self.resume_key(),
             'trigger:ready': self.trigger_ready()
         }

@@ -8,15 +8,6 @@ LENNY =  "¯\\_(ツ)_/¯"
 SAD_LENNY = "(◡︵◡)"
 
 
-DEFAULT_PLAY_BUTTON_PROPS = {
-    'control:type': 'extended',
-    'button:content:icon': 'list-alt',
-    'button:content:action': f'player:content',
-    'button:restart:icon': 'settings',
-    'button:speed:icon': 'replay',
-    'button:speed:action': 'player:restart',
-}
-
 def format_action(path: str, params: dict = None, interaction: str = None, options: str = None, module: str = None):
     if params is None:
         params = {}
@@ -378,6 +369,17 @@ def player_action_btn():
         return 'content:request:interaction:init@https://msx.benzac.de/interaction/tizen.html'
     else:
         return 'panel:request:player:options'
+
+
+DEFAULT_PLAY_BUTTON_PROPS = {
+    'control:type': 'extended',
+    'button:content:icon': 'list-alt',
+    'button:content:action': f'player:content',
+    'button:restart:icon': 'settings',
+    'button:restart:action': player_action_btn(),
+    'button:speed:icon': 'replay',
+    'button:speed:action': 'player:restart',
+}
 
 
 def settings_screen():
