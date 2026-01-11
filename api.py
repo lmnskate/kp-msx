@@ -167,7 +167,6 @@ async def bookmarks(request: Request):
 
     result = msx.tv_channels(
         result,
-        proxy=request.state.device.settings.proxy,
         alternative_player=request.state.device.settings.alternative_player
     )
     return result

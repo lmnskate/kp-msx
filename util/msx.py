@@ -241,7 +241,7 @@ def empty_response():
     }
 
 
-def tv_channels(channels, proxy: bool = False, alternative_player: bool = False):
+def tv_channels(channels, alternative_player: bool = False):
     resp = {
         "type": "list",
         'header': {
@@ -269,7 +269,7 @@ def tv_channels(channels, proxy: bool = False, alternative_player: bool = False)
                 'progress:display': 'false'
             }
         },
-        "items": [channel.to_msx(proxy=proxy, alternative_player=alternative_player) for channel in channels]
+        "items": [channel.to_msx(alternative_player=alternative_player) for channel in channels]
     }
 
     return resp

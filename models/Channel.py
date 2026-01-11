@@ -14,11 +14,8 @@ class Channel:
         self.logo = logos.get('l') or logos.get('m') or logos.get('s')
         self.stream = data.get('stream')
 
-    def to_msx(self, proxy: bool = False, alternative_player: bool = False):
-        if proxy:
-            url = make_proxy_url(self.stream)
-        else:
-            url = self.stream
+    def to_msx(self, alternative_player: bool = False):
+        url = self.stream
 
         if alternative_player:
             player = config.ALTERNATIVE_PLAYER
