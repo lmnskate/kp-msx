@@ -25,6 +25,7 @@ class Content:
 
         self.poster = (data.get('posters') or {}).get('big')
         self.rating = data.get('imdb_rating') or data.get('kinopoinsk_rating')
+        self.is_4k = data.get('quality') == 2160
 
         self.bookmarks = data.get('bookmarks')
         if self.bookmarks is not None and isinstance(self.bookmarks, list):
@@ -66,6 +67,8 @@ class Content:
                 entry['titleFooter'] += f' {{ico:calendar-month}} {self.year}'
             if self.new_episodes is not None:
                 entry['titleFooter'] += f' {{ico:new-releases}} {self.new_episodes}'
+            if self.is_4k:
+                entry['titleFooter'] += f' {{ico:4k}}'
 
             entry['titleFooter'] = entry['titleFooter'].strip()
         return entry
@@ -164,6 +167,8 @@ class Content:
             stamp += f' {{ico:stars}} {self.rating}'
         if self.year:
             stamp += f' {{ico:calendar-month}} {self.year}'
+        if self.is_4k:
+            stamp += f' {{ico:4k}}'
 
         stamp = stamp.strip()
         if len(stamp) == 0:
