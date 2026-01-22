@@ -15,6 +15,7 @@ class DeviceSettings:
         self.hevc = data.get('hevc', False)
         self.hdr = data.get('hdr', False)
         self.mixed_playlist = data.get('mixed_playlist', False)
+        self.small_posters = data.get('small_posters', False)
         self.server = data.get('server', msx.LENNY)
 
     def to_dict(self):
@@ -26,6 +27,7 @@ class DeviceSettings:
             'hevc': self.hevc,
             'hdr': self.hdr,
             'mixed_playlist': self.mixed_playlist,
+            'small_posters': self.small_posters,
             'server': self.server
         }
 
@@ -89,6 +91,15 @@ class DeviceSettings:
             "Включите, если телевизор очень старый (Tizen или webOS до 3 версии, год выпуска ТВ до 2018 года)."
         )
         entry.update(msx.stamp(self.alternative_player))
+        return entry
+
+    def to_small_posters_msx_button(self):
+        entry = msx.settings_button(
+            msx.SMALL_POSTERS_ID, 'Ремонт постеров',
+            msx.format_action(f'/msx/settings/toggle/{msx.SMALL_POSTERS_ID}', module='execute'),
+            "Включите, если постеры не загружаются. Требуется перезапуск приложения."
+        )
+        entry.update(msx.stamp(self.small_posters))
         return entry
 
     def to_menu_msx_button(self):

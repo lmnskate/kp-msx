@@ -17,6 +17,7 @@ class Content:
         self.cast = data.get('cast')
         self.year = data.get('year')
         self.subscribed = data.get('subscribed')
+        self.imdb = data.get('imdb')
 
         if self.voice:
             self.plot += f'\n\nОзвучки: {self.voice}'
@@ -24,6 +25,8 @@ class Content:
             self.plot += f'\n\nВ ролях: {self.cast}'
 
         self.poster = (data.get('posters') or {}).get('big')
+        self.small_poster = (data.get('posters') or {}).get('small')
+
         self.rating = data.get('imdb_rating') or data.get('kinopoinsk_rating')
         self.is_4k = data.get('quality') == 2160
 
@@ -51,10 +54,10 @@ class Content:
     def update_bookmarks(self, folders):
         self.bookmarks = [i.id for i in folders]
 
-    def to_msx(self):
+    def to_msx(self, small_poster: bool = False):
         entry = {
             'title': self.title,
-            'image': self.poster,
+            'image': self.small_poster if small_poster else self.poster,
             "action": msx.format_action('/msx/content', params={'content_id': self.id}, module='panel')
         }
         if self.media is not None and self.media.season > 0:
@@ -138,7 +141,11 @@ class Content:
 
         return button
 
-    def to_msx_panel(self, proxy: bool = False, alternative_player: bool = False):
+    def to_msx_panel(self,
+                     proxy: bool = False,
+                     alternative_player: bool = False,
+                     small_poster: bool = False):
+
         buttons = [self.to_bookmark_button()]
 
         if self.seasons:
@@ -184,7 +191,7 @@ class Content:
                             'id': 'teaser',
                             "type": "teaser",
                             "layout": "0,0,4,6",
-                            "image": self.poster,
+                            "image": self.small_poster if small_poster else self.poster,
                             "imageFiller": "height-left",
                             'action': 'focus:plot',
                             'stamp': stamp

@@ -137,7 +137,7 @@ async def category(request: Request):
     extra = request.query_params.get('extra')
     genre = request.query_params.get('genre')
     result = await request.state.device.kp.get_content(category=cat, page=page, extra=extra, genre=genre)
-    result = msx.content(result, cat, page, extra=(extra or genre))
+    result = msx.content(result, cat, page, extra=(extra or genre), small_posters=request.state.device.settings.small_posters)
     return result
 
 
@@ -177,7 +177,7 @@ async def folder(request: Request):
     page = int(request.query_params.get('page'))
     f = request.query_params.get('folder')
     result = await request.state.device.kp.get_bookmark_folder(f, page=page)
-    result = msx.content(result, "folder", page, extra="wtf")
+    result = msx.content(result, "folder", page, extra="wtf", small_posters=request.state.device.settings.small_posters)
     return result
 
 
@@ -186,7 +186,8 @@ async def content(request: Request):
     result = await request.state.device.kp.get_single_content(request.query_params.get('content_id'))
     return result.to_msx_panel(
         proxy=request.state.device.settings.proxy,
-        alternative_player=request.state.device.settings.alternative_player
+        alternative_player=request.state.device.settings.alternative_player,
+        small_poster=request.state.device.settings.small_posters
     )
 
 
@@ -235,7 +236,7 @@ async def episodes(request: Request):
 @app.get(ENDPOINT + '/search')
 async def search(request: Request):
     result = await request.state.device.kp.search(request.query_params.get('q'))
-    result = msx.content(result, "search", 1, extra=request.query_params.get('q'), decompress=False)
+    result = msx.content(result, "search", 1, extra=request.query_params.get('q'), decompress=False, small_posters=request.state.device.settings.small_posters)
     return result
 
 
@@ -243,14 +244,14 @@ async def search(request: Request):
 async def history(request: Request):
     page = int(request.query_params.get('page'))
     result = await request.state.device.kp.get_history(page=page)
-    result = msx.content(result, "history", page, extra="wtf")
+    result = msx.content(result, "history", page, extra="wtf", small_posters=request.state.device.settings.small_posters)
     return result
 
 
 @app.get(ENDPOINT + '/watching')
 async def watching(request: Request):
     result = await request.state.device.kp.get_watching(subscribed=1)
-    result = msx.content(result, "watching", 0, extra='wtf')
+    result = msx.content(result, "watching", 0, extra='wtf', small_posters=request.state.device.settings.small_posters)
     return result
 
 
@@ -342,6 +343,9 @@ async def settings_toggle_proxy(request: Request, setting: str):
         case msx.ALTERNATIVE_PLAYER_ID:
             await request.state.device.toggle_alternative_player()
             return msx.update_panel(msx.ALTERNATIVE_PLAYER_ID, msx.stamp(request.state.device.settings.alternative_player))
+        case msx.SMALL_POSTERS_ID:
+            await request.state.device.toggle_small_posters()
+            return msx.update_panel(msx.SMALL_POSTERS_ID, msx.stamp(request.state.device.settings.small_posters))
         case _:
             return msx.empty_response()
 

@@ -168,7 +168,7 @@ def restart():
     }
 
 
-def content(entries, category, page, extra=None, decompress=None):
+def content(entries, category, page, extra=None, decompress=None, small_posters: bool = False):
     resp = {
         "type": "list",
         "template": {
@@ -189,7 +189,7 @@ def content(entries, category, page, extra=None, decompress=None):
             "items": [i.to_msx(category) for i in CategoryExtra.static_extras()]
         }
     for entry in entries:
-        resp['items'].append(entry.to_msx())
+        resp['items'].append(entry.to_msx(small_poster=small_posters))
 
     return resp
 
@@ -417,6 +417,7 @@ MIXED_PLAYLIST_ID = 'mixed_playlist'
 SERVER_ID = 'server'
 PROXY_ID = 'proxy'
 ALTERNATIVE_PLAYER_ID = 'alternative_player'
+SMALL_POSTERS_ID = 'small_posters'
 MENU_ID = 'menu'
 HELP_ID = 'help'
 
@@ -437,14 +438,15 @@ def settings_menu(device_settings: 'DeviceSettings'):
             device_settings.to_server_msx_button(),
             device_settings.to_proxy_msx_button(),
             device_settings.to_alternative_player_msx_button(),
+            device_settings.to_small_posters_msx_button(),
             device_settings.to_menu_msx_button(),
             device_settings.to_help_msx_button(),
             {
                 "position": "context:context1",
                 'type': 'space',
                 'id': 'info',
-                'offset': '-4,1,4,1',
-                #'offset': '0,0,4,1',
+                #'offset': '-4,1,4,1',
+                'offset': '0,0,4,1',
                 'headline': '',
                 'action': '[]',
             }
