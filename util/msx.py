@@ -382,14 +382,14 @@ DEFAULT_PLAY_BUTTON_PROPS = {
 }
 
 
-def settings_screen():
-    return {
+def settings_screen(screen: bool = False):
+    entry = {
         "headline": "Настройки",
         "caption": "/{ico:msx-blue:stop}Настройки",
         "template": {
             "enumerate": False,
             "type": "control",
-            "layout": "0,0,8,1"
+            "layout": "0,0,6,1" if screen else "0,0,8,1"
         },
         "items": [
             {
@@ -405,9 +405,22 @@ def settings_screen():
                 "label": 'Перезапустить приложение',
                 'action': 'reload',
                 'icon': 'restart-alt'
-            },
+            }
         ]
     }
+
+    if screen:
+        entry['items'].append({
+            "position": "context:context1",
+            'type': 'space',
+            'id': 'info',
+            'offset': '-6,1,6,1',
+            #'offset': '0,0,4,1',
+            'headline': 'Настройки можно также открыть из главного меню (слева) нажатием синей цветной [{ico:msx-blue:stop}] кнопки или кнопки "меню" [{ico:menu}] на пульте. Подсказка находится справа снизу экрана.\nЭтот (и любой другой) пункт меню можно скрыть в разделе "Настройки kino.pub".',
+            'action': '[]',
+        })
+
+    return entry
 
 
 FOURK_ID = 'fourk'

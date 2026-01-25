@@ -303,6 +303,11 @@ async def toggle_bookmark(request: Request):
 # Settings
 
 
+@app.get(ENDPOINT + '/settings/screen')
+async def settings_screen(request: Request):
+    return msx.settings_screen(screen=True)
+
+
 @app.get(ENDPOINT + '/settings')
 async def settings(request: Request):
     return msx.settings_menu(request.state.device.settings)
