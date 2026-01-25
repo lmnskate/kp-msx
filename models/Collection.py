@@ -1,4 +1,4 @@
-from util import msx
+from util import msx, hacks
 
 
 class Collection:
@@ -7,7 +7,7 @@ class Collection:
         self.id = data.get('id')
         self.title = data.get('title')
         self.poster = (data.get('posters') or {}).get('big')
-        self.small_poster = (data.get('posters') or {}).get('small')
+        self.small_poster = hacks.posters_fix((data.get('posters') or {}).get('small'))
 
     def to_msx(self, small_poster: bool = False):
         return {

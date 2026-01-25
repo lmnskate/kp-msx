@@ -1,7 +1,7 @@
 from models.Folder import Folder
 from models.Season import Season
 from models.Video import Video
-from util import msx
+from util import msx, hacks
 
 
 class Content:
@@ -25,7 +25,7 @@ class Content:
             self.plot += f'\n\nВ ролях: {self.cast}'
 
         self.poster = (data.get('posters') or {}).get('big')
-        self.small_poster = (data.get('posters') or {}).get('small')
+        self.small_poster = hacks.posters_fix((data.get('posters') or {}).get('small'))
 
         self.rating = data.get('imdb_rating') or data.get('kinopoinsk_rating')
         self.is_4k = data.get('quality') == 2160
