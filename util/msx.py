@@ -183,7 +183,7 @@ def content(entries, category, page, extra=None, decompress=None, small_posters:
     if decompress is not None:
         resp['template']['decompress'] = decompress
 
-    if page == 1 and extra is None:
+    if page == 1 and category is not None and extra is None:
         from models.CategoryExtra import CategoryExtra
         resp['header'] = {
             "items": [i.to_msx(category) for i in CategoryExtra.static_extras()]
