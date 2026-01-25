@@ -162,7 +162,7 @@ async def bookmarks(request: Request):
 
 
 @app.get(ENDPOINT + '/tv')
-async def bookmarks(request: Request):
+async def tv(request: Request):
     result = await request.state.device.kp.get_tv()
 
     result = msx.tv_channels(
@@ -252,6 +252,22 @@ async def history(request: Request):
 async def watching(request: Request):
     result = await request.state.device.kp.get_watching(subscribed=1)
     result = msx.content(result, "watching", 0, extra='wtf', small_posters=request.state.device.settings.small_posters)
+    return result
+
+
+@app.get(ENDPOINT + '/collections')
+async def collections(request: Request):
+    page = request.query_params.get('page')
+    result = await request.state.device.kp.get_collections(page=page)
+    result = msx.collections(result, small_posters=request.state.device.settings.small_posters)
+    return result
+
+
+@app.get(ENDPOINT + '/collection')
+async def single_collection(request: Request):
+    collection_id = request.query_params.get('collection_id')
+    result = await request.state.device.kp.get_single_collection(collection_id)
+    result = msx.content(result, "collection", 0, extra='wtf', small_posters=request.state.device.settings.small_posters)
     return result
 
 

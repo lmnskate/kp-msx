@@ -3,6 +3,7 @@ import aiohttp
 import config
 from models.Category import Category
 from models.Channel import Channel
+from models.Collection import Collection
 from models.Content import Content
 from models.Folder import Folder
 from models.Genre import Genre
@@ -121,6 +122,18 @@ class KinoPub:
         if result is None:
             return None
         return [Channel(i) for i in result['channels']]
+
+    async def get_collections(self, page):
+        result = await self.api('/collections', params={'page': page})
+        if result is None:
+            return None
+        return [Collection(i) for i in result['items']]
+
+    async def get_single_collection(self, collection_id):
+        result = await self.api('/collections/view', params={'id': collection_id})
+        if result is None:
+            return None
+        return [Content(i) for i in result['items']]
 
     async def notify(self, device_id):
         await self.api(f'/device/notify', {'title': "KP-MSX", 'hardware': LENNY, 'software': device_id}, method='POST')

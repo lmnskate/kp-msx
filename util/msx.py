@@ -194,6 +194,24 @@ def content(entries, category, page, extra=None, decompress=None, small_posters:
     return resp
 
 
+def collections(entries, small_posters: bool = False):
+    resp = {
+        "type": "list",
+        "template": {
+            "type": "separate",
+            "layout": "0,0,3,6",
+            "color": "msx-glass",
+            "title": "Title"
+        },
+        "items": []
+    }
+
+    for entry in entries:
+        resp['items'].append(entry.to_msx(small_poster=small_posters))
+
+    return resp
+
+
 def bookmark_folders(result):
     return {
         "type": "list",

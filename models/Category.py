@@ -10,6 +10,7 @@ class Category:
         lambda: {'id': 'new', 'title': 'Новинки', 'path': '/msx/category', 'params': {'sort': 'created-', 'page': '{PAGE}'}, 'interaction': f'{config.MSX_HOST}/paging.html'},
         lambda: {'id': 'toons', 'title': 'Мультфильмы', 'path': '/msx/category', 'params': {'genre': '23', 'page': '{PAGE}'}, 'interaction': f'{config.MSX_HOST}/paging.html'},
         lambda: {'id': 'anime', 'title': 'Аниме', 'path': '/msx/category', 'params': {'genre': '25', 'page': '{PAGE}'}, 'interaction': f'{config.MSX_HOST}/paging.html'},
+        lambda: {'id': 'collections', 'title': 'Подборки', 'path': '/msx/collections', 'params': {'page': '{PAGE}'}, 'interaction': f'{config.MSX_HOST}/paging.html'},
         lambda: {'id': 'sport', 'title': 'Спорт', 'path': '/msx/tv'},
         lambda: {'id': 'search', 'title': 'Поиск', 'icon': 'search', 'path': '/msx/search', 'params': {'q': '{INPUT}'}, 'interaction': 'http://msx.benzac.de/interaction/input.html', 'options': 'search:3|ru|Поиск'},
         lambda: {'id': 'bookmarks', 'title': 'Закладки', 'icon': 'bookmark', 'path': '/msx/bookmarks'},
