@@ -64,7 +64,7 @@ class DeviceSettings:
             msx.format_action(f'/msx/settings/toggle/{msx.MIXED_PLAYLIST_ID}', module='execute'),
             "Выключатель смешанного плейлиста. Если телевизор старый, слабый или дешёвый, то лучше не включать."
         )
-        entry.update(msx.stamp(self.hevc))
+        entry.update(msx.stamp(self.mixed_playlist))
         return entry
 
     def to_server_msx_button(self):
