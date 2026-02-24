@@ -1,13 +1,8 @@
-from urllib.parse import urlencode
-
-import config
 from models.Playable import Playable
 from util import msx
-from util.proxy import make_proxy_url
 
 
 class Episode(Playable):
-
     def __init__(self, data, content_id, season):
         super().__init__(data)
 
@@ -20,8 +15,7 @@ class Episode(Playable):
         self.watched = data.get('watched') == 1
 
     def menu_title(self):
-        result = f'{self.n}. {self.title}'
-        return result
+        return f'{self.n}. {self.title}'
 
     def player_title(self):
         return f'[S{self.season}/E{self.n}] {self.title}'
@@ -30,7 +24,7 @@ class Episode(Playable):
         params = {
             'content_id': self.content_id,
             'season': self.season,
-            'episode': self.n
+            'episode': self.n,
         }
         return msx.format_action('/msx/play', params=params, module='execute')
 

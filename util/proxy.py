@@ -1,9 +1,11 @@
+import re
 from re import RegexFlag
-from urllib.parse import urlparse, urlencode
+from urllib.parse import urlencode, urlparse
+
 import aiohttp
+
 import config
 from util import db
-import re
 
 
 def make_proxy_url(url):
@@ -11,14 +13,15 @@ def make_proxy_url(url):
     remember_domain(domain)
     return f'{config.MSX_HOST}/msx/proxy?' + urlencode({'url': url})
 
+
 def domain_exists(domain):
-    if db.get_domain(domain) is None:
-        return False
-    return True
+    return db.get_domain(domain) is not None
+
 
 def remember_domain(domain):
     if not domain_exists(domain):
         db.add_domain(domain)
+
 
 def check_url(url):
     domain = urlparse(url).netloc
@@ -26,9 +29,11 @@ def check_url(url):
         raise Exception('Unknown domain')
     return True
 
+
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36'
 }
+
 
 def rewrite_domain(url: str, content: str) -> str:
     domain_info = urlparse(url)
@@ -39,12 +44,16 @@ def rewrite_domain(url: str, content: str) -> str:
         r = f'{config.MSX_HOST}/msx/proxy?' + urlencode({'url': prefix + '/' + b})
         return a + r + c
 
-    content = re.sub('(^|URI=")/(.*?)($|")', lambda x: _d(x), content, flags=RegexFlag.MULTILINE)
+    content = re.sub(
+        '(^|URI=")/(.*?)($|")', lambda x: _d(x), content, flags=RegexFlag.MULTILINE
+    )
     return content
 
 
 async def get(url):
-    async with aiohttp.ClientSession(headers=HEADERS, timeout=aiohttp.ClientTimeout(total=5)) as s:
+    async with aiohttp.ClientSession(
+        headers=HEADERS, timeout=aiohttp.ClientTimeout(total=5)
+    ) as s:
         response = await s.get(url)
         content = await response.read()
         if isinstance(content, bytes):
@@ -52,4 +61,3 @@ async def get(url):
             text_content = rewrite_domain(url, text_content)
             content = text_content.encode('utf-8')
         return response.status, response.headers.get('content-type'), content
-

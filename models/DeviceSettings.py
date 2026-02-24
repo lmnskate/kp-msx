@@ -3,7 +3,6 @@ from util import msx
 
 
 class DeviceSettings:
-
     def __init__(self, data):
         if data is None:
             data = {}
@@ -28,96 +27,95 @@ class DeviceSettings:
             'hdr': self.hdr,
             'mixed_playlist': self.mixed_playlist,
             'small_posters': self.small_posters,
-            'server': self.server
+            'server': self.server,
         }
 
-    def to_fourk_msx_button(self):
+    def _toggle_button(self, setting_id, label, hint, value):
         entry = msx.settings_button(
-            msx.FOURK_ID, '4K',
-            msx.format_action(f'/msx/settings/toggle/{msx.FOURK_ID}', module='execute'),
-            "Выключатель 4К. Если телевизор старый, слабый или дешёвый, то лучше не включать."
+            setting_id,
+            label,
+            msx.format_action(
+                f'/msx/settings/toggle/{setting_id}', module='execute',
+            ),
+            hint,
         )
-        entry.update(msx.stamp(self.fourk))
+        entry.update(msx.stamp(value))
         return entry
+
+    def to_fourk_msx_button(self):
+        return self._toggle_button(
+            msx.FOURK_ID, '4K',
+            '\u0412\u044b\u043a\u043b\u044e\u0447\u0430\u0442\u0435\u043b\u044c 4\u041a. \u0415\u0441\u043b\u0438 \u0442\u0435\u043b\u0435\u0432\u0438\u0437\u043e\u0440 \u0441\u0442\u0430\u0440\u044b\u0439, \u0441\u043b\u0430\u0431\u044b\u0439 \u0438\u043b\u0438 \u0434\u0435\u0448\u0451\u0432\u044b\u0439, \u0442\u043e \u043b\u0443\u0447\u0448\u0435 \u043d\u0435 \u0432\u043a\u043b\u044e\u0447\u0430\u0442\u044c.',
+            self.fourk,
+        )
 
     def to_hdr_msx_button(self):
-        entry = msx.settings_button(
+        return self._toggle_button(
             msx.HDR_ID, 'HDR',
-            msx.format_action(f'/msx/settings/toggle/{msx.HDR_ID}', module='execute'),
-            "Выключатель HDR. Если телевизор старый, слабый или дешёвый, то лучше не включать."
+            '\u0412\u044b\u043a\u043b\u044e\u0447\u0430\u0442\u0435\u043b\u044c HDR. \u0415\u0441\u043b\u0438 \u0442\u0435\u043b\u0435\u0432\u0438\u0437\u043e\u0440 \u0441\u0442\u0430\u0440\u044b\u0439, \u0441\u043b\u0430\u0431\u044b\u0439 \u0438\u043b\u0438 \u0434\u0435\u0448\u0451\u0432\u044b\u0439, \u0442\u043e \u043b\u0443\u0447\u0448\u0435 \u043d\u0435 \u0432\u043a\u043b\u044e\u0447\u0430\u0442\u044c.',
+            self.hdr,
         )
-        entry.update(msx.stamp(self.hdr))
-        return entry
 
     def to_hevc_msx_button(self):
-        entry = msx.settings_button(
+        return self._toggle_button(
             msx.HEVC_ID, 'HEVC',
-            msx.format_action(f'/msx/settings/toggle/{msx.HEVC_ID}', module='execute'),
-            "Выключатель HEVC. Если телевизор старый, слабый или дешёвый, то лучше не включать."
+            '\u0412\u044b\u043a\u043b\u044e\u0447\u0430\u0442\u0435\u043b\u044c HEVC. \u0415\u0441\u043b\u0438 \u0442\u0435\u043b\u0435\u0432\u0438\u0437\u043e\u0440 \u0441\u0442\u0430\u0440\u044b\u0439, \u0441\u043b\u0430\u0431\u044b\u0439 \u0438\u043b\u0438 \u0434\u0435\u0448\u0451\u0432\u044b\u0439, \u0442\u043e \u043b\u0443\u0447\u0448\u0435 \u043d\u0435 \u0432\u043a\u043b\u044e\u0447\u0430\u0442\u044c.',
+            self.hevc,
         )
-        entry.update(msx.stamp(self.hevc))
-        return entry
 
     def to_mixed_playlist_msx_button(self):
-        entry = msx.settings_button(
-            msx.MIXED_PLAYLIST_ID, 'Смешанный плейлист',
-            msx.format_action(f'/msx/settings/toggle/{msx.MIXED_PLAYLIST_ID}', module='execute'),
-            "Выключатель смешанного плейлиста. Если телевизор старый, слабый или дешёвый, то лучше не включать."
+        return self._toggle_button(
+            msx.MIXED_PLAYLIST_ID, '\u0421\u043c\u0435\u0448\u0430\u043d\u043d\u044b\u0439 \u043f\u043b\u0435\u0439\u043b\u0438\u0441\u0442',
+            '\u0412\u044b\u043a\u043b\u044e\u0447\u0430\u0442\u0435\u043b\u044c \u0441\u043c\u0435\u0448\u0430\u043d\u043d\u043e\u0433\u043e \u043f\u043b\u0435\u0439\u043b\u0438\u0441\u0442\u0430. \u0415\u0441\u043b\u0438 \u0442\u0435\u043b\u0435\u0432\u0438\u0437\u043e\u0440 \u0441\u0442\u0430\u0440\u044b\u0439, \u0441\u043b\u0430\u0431\u044b\u0439 \u0438\u043b\u0438 \u0434\u0435\u0448\u0451\u0432\u044b\u0439, \u0442\u043e \u043b\u0443\u0447\u0448\u0435 \u043d\u0435 \u0432\u043a\u043b\u044e\u0447\u0430\u0442\u044c.',
+            self.mixed_playlist,
         )
-        entry.update(msx.stamp(self.mixed_playlist))
-        return entry
-
-    def to_server_msx_button(self):
-        entry = msx.settings_button(
-            msx.SERVER_ID, f'Сервер: {self.server}',
-            msx.format_action(f'/msx/settings/toggle/{msx.SERVER_ID}', module='execute'),
-            "Переключатель сервера. Для определения лучшего сервера используйте zamerka.com."
-        )
-        return entry
 
     def to_proxy_msx_button(self):
-        entry = msx.settings_button(
-            msx.PROXY_ID, 'Прокси для плейлиста',
-            msx.format_action(f'/msx/settings/toggle/{msx.PROXY_ID}', module='execute'),
-            "Включите, если видео не загружаются вообще (нет длительности, нет дорожек и субтитров в настройках плеера)."
+        return self._toggle_button(
+            msx.PROXY_ID, '\u041f\u0440\u043e\u043a\u0441\u0438 \u0434\u043b\u044f \u043f\u043b\u0435\u0439\u043b\u0438\u0441\u0442\u0430',
+            '\u0412\u043a\u043b\u044e\u0447\u0438\u0442\u0435, \u0435\u0441\u043b\u0438 \u0432\u0438\u0434\u0435\u043e \u043d\u0435 \u0437\u0430\u0433\u0440\u0443\u0436\u0430\u044e\u0442\u0441\u044f \u0432\u043e\u043e\u0431\u0449\u0435 (\u043d\u0435\u0442 \u0434\u043b\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0441\u0442\u0438, \u043d\u0435\u0442 \u0434\u043e\u0440\u043e\u0436\u0435\u043a \u0438 \u0441\u0443\u0431\u0442\u0438\u0442\u0440\u043e\u0432 \u0432 \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0430\u0445 \u043f\u043b\u0435\u0435\u0440\u0430).',
+            self.proxy,
         )
-        entry.update(msx.stamp(self.proxy))
-        return entry
 
     def to_alternative_player_msx_button(self):
-        entry = msx.settings_button(
-            msx.ALTERNATIVE_PLAYER_ID, 'Альтернативный плеер',
-            msx.format_action(f'/msx/settings/toggle/{msx.ALTERNATIVE_PLAYER_ID}', module='execute'),
-            "Включите, если телевизор очень старый (Tizen или webOS до 3 версии, год выпуска ТВ до 2018 года)."
+        return self._toggle_button(
+            msx.ALTERNATIVE_PLAYER_ID, '\u0410\u043b\u044c\u0442\u0435\u0440\u043d\u0430\u0442\u0438\u0432\u043d\u044b\u0439 \u043f\u043b\u0435\u0435\u0440',
+            '\u0412\u043a\u043b\u044e\u0447\u0438\u0442\u0435, \u0435\u0441\u043b\u0438 \u0442\u0435\u043b\u0435\u0432\u0438\u0437\u043e\u0440 \u043e\u0447\u0435\u043d\u044c \u0441\u0442\u0430\u0440\u044b\u0439 (Tizen \u0438\u043b\u0438 webOS \u0434\u043e 3 \u0432\u0435\u0440\u0441\u0438\u0438, \u0433\u043e\u0434 \u0432\u044b\u043f\u0443\u0441\u043a\u0430 \u0422\u0412 \u0434\u043e 2018 \u0433\u043e\u0434\u0430).',
+            self.alternative_player,
         )
-        entry.update(msx.stamp(self.alternative_player))
-        return entry
 
     def to_small_posters_msx_button(self):
-        entry = msx.settings_button(
-            msx.SMALL_POSTERS_ID, 'Ремонт постеров',
-            msx.format_action(f'/msx/settings/toggle/{msx.SMALL_POSTERS_ID}', module='execute'),
-            "Включите, если постеры не загружаются. Требуется перезапуск приложения."
+        return self._toggle_button(
+            msx.SMALL_POSTERS_ID, '\u0420\u0435\u043c\u043e\u043d\u0442 \u043f\u043e\u0441\u0442\u0435\u0440\u043e\u0432',
+            '\u0412\u043a\u043b\u044e\u0447\u0438\u0442\u0435, \u0435\u0441\u043b\u0438 \u043f\u043e\u0441\u0442\u0435\u0440\u044b \u043d\u0435 \u0437\u0430\u0433\u0440\u0443\u0436\u0430\u044e\u0442\u0441\u044f. \u0422\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044f \u043f\u0435\u0440\u0435\u0437\u0430\u043f\u0443\u0441\u043a \u043f\u0440\u0438\u043b\u043e\u0436\u0435\u043d\u0438\u044f.',
+            self.small_posters,
         )
-        entry.update(msx.stamp(self.small_posters))
-        return entry
+
+    def to_server_msx_button(self):
+        return msx.settings_button(
+            msx.SERVER_ID,
+            f'\u0421\u0435\u0440\u0432\u0435\u0440: {self.server}',
+            msx.format_action(
+                f'/msx/settings/toggle/{msx.SERVER_ID}', module='execute',
+            ),
+            '\u041f\u0435\u0440\u0435\u043a\u043b\u044e\u0447\u0430\u0442\u0435\u043b\u044c \u0441\u0435\u0440\u0432\u0435\u0440\u0430. \u0414\u043b\u044f \u043e\u043f\u0440\u0435\u0434\u0435\u043b\u0435\u043d\u0438\u044f \u043b\u0443\u0447\u0448\u0435\u0433\u043e \u0441\u0435\u0440\u0432\u0435\u0440\u0430 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0439\u0442\u0435 zamerka.com.',
+        )
 
     def to_menu_msx_button(self):
-        entry = msx.settings_button(
-            msx.MENU_ID, 'Пункты меню',
-            msx.format_action(f'/msx/settings/menu_entries', module='panel'),
-            "Здесь можно выключить или включить разделы главного меню слева. После изменения потребуется перезапустить приложение"
+        return msx.settings_button(
+            msx.MENU_ID,
+            '\u041f\u0443\u043d\u043a\u0442\u044b \u043c\u0435\u043d\u044e',
+            msx.format_action('/msx/settings/menu_entries', module='panel'),
+            '\u0417\u0434\u0435\u0441\u044c \u043c\u043e\u0436\u043d\u043e \u0432\u044b\u043a\u043b\u044e\u0447\u0438\u0442\u044c \u0438\u043b\u0438 \u0432\u043a\u043b\u044e\u0447\u0438\u0442\u044c \u0440\u0430\u0437\u0434\u0435\u043b\u044b \u0433\u043b\u0430\u0432\u043d\u043e\u0433\u043e \u043c\u0435\u043d\u044e \u0441\u043b\u0435\u0432\u0430. \u041f\u043e\u0441\u043b\u0435 \u0438\u0437\u043c\u0435\u043d\u0435\u043d\u0438\u044f \u043f\u043e\u0442\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044f \u043f\u0435\u0440\u0435\u0437\u0430\u043f\u0443\u0441\u0442\u0438\u0442\u044c \u043f\u0440\u0438\u043b\u043e\u0436\u0435\u043d\u0438\u0435',
         )
-        return entry
 
     def to_help_msx_button(self):
-        entry = msx.settings_button(
-            msx.HELP_ID, 'Справка','[]',
-            "Исходный код: https://github.com/slonopot/kp-msx\n"
-            f"Плеер: {config.PLAYER}\n"
-            f"Альтернативный плеер: {config.ALTERNATIVE_PLAYER}\n"
-            f"Протокол: {config.PROTOCOL}"
+        return msx.settings_button(
+            msx.HELP_ID,
+            '\u0421\u043f\u0440\u0430\u0432\u043a\u0430',
+            '[]',
+            '\u0418\u0441\u0445\u043e\u0434\u043d\u044b\u0439 \u043a\u043e\u0434: https://github.com/lmnskate/kp-msx\n'
+            f'\u041f\u043b\u0435\u0435\u0440: {config.PLAYER}\n'
+            f'\u0410\u043b\u044c\u0442\u0435\u0440\u043d\u0430\u0442\u0438\u0432\u043d\u044b\u0439 \u043f\u043b\u0435\u0435\u0440: {config.ALTERNATIVE_PLAYER}\n'
+            f'\u041f\u0440\u043e\u0442\u043e\u043a\u043e\u043b: {config.PROTOCOL}',
         )
-        return entry
-
-

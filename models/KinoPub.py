@@ -14,18 +14,23 @@ from util.msx import LENNY
 
 
 class KinoPub:
-
     def __init__(self, token, refresh):
         self.token = token
         self.refresh = refresh
 
     async def api(self, path, params=None, method='GET'):
-        headers = {'Authorization': 'Bearer ' + self.token}
-        async with aiohttp.ClientSession(headers=headers, timeout=aiohttp.ClientTimeout(total=5)) as s:
+        headers = {'Authorization': f'Bearer {self.token}'}
+        async with aiohttp.ClientSession(
+            headers=headers, timeout=aiohttp.ClientTimeout(total=5),
+        ) as s:
             if method == 'GET':
-                response = await s.get(f'https://api.service-kp.com/v1{path}', params=params)
+                response = await s.get(
+                    f'https://api.service-kp.com/v1{path}', params=params,
+                )
             else:
-                response = await s.request(method, f'https://api.service-kp.com/v1{path}', json=params)
+                response = await s.request(
+                    method, f'https://api.service-kp.com/v1{path}', json=params,
+                )
 
             if response.status == 401:
                 reauth_result = await self.refresh_tokens()
@@ -48,29 +53,27 @@ class KinoPub:
             return None
         return [Genre(i) for i in result['items']]
 
-    async def get_content(self, category=None, page=1, extra=None, genre=None, sort=None):
-        path = '/items'
-        if extra is not None:
-            path += f'/{extra}'
+    async def get_content(
+        self, category=None, page=1, extra=None, genre=None, sort=None,
+    ):
+        path = f'/items/{extra}' if extra else '/items'
         params = {'page': page}
-        if category is not None:
+        if category:
             params['type'] = category
-        if genre is not None:
+        if genre:
             params['genre'] = genre
-        if sort is not None:
+        if sort:
             params['sort'] = sort
         result = await self.api(path, params=params)
         if result is None:
             return []
-        results = [Content(i) for i in result['items']]
-        return results
+        return [Content(i) for i in result['items']]
 
     async def search(self, query):
         result = await self.api('/items/search', params={'q': query})
         if result is None:
             return []
-        results = [Content(i) for i in result['items']]
-        return results
+        return [Content(i) for i in result['items']]
 
     async def get_single_content(self, id):
         result = await self.api(f'/items/{id}')
@@ -79,18 +82,16 @@ class KinoPub:
         return Content(result['item'])
 
     async def get_bookmark_folders(self):
-        result = await self.api(f'/bookmarks')
+        result = await self.api('/bookmarks')
         if result is None:
             return None
         return [Folder(i) for i in result['items']]
 
     async def create_bookmark_folder(self, name: str = 'Мои закладки'):
-        req = {'title': name}
-        result = await self.api(f'/bookmarks/create', req, method='POST')
+        await self.api('/bookmarks/create', {'title': name}, method='POST')
 
     async def get_content_folders(self, content_id):
-        req = {'item': content_id}
-        result = await self.api(f'/bookmarks/get-item-folders', req)
+        result = await self.api('/bookmarks/get-item-folders', {'item': content_id})
         if result is None:
             return None
         return [Folder(i) for i in result['folders']]
@@ -103,24 +104,24 @@ class KinoPub:
             current_page = result['pagination']['current']
             if page > current_page:
                 return []
-        except:
+        except Exception:
             pass
         return [Content(i) for i in result['items']]
 
     async def get_history(self, page=1):
-        result = await self.api(f'/history', {'page': page})
+        result = await self.api('/history', {'page': page})
         if result is None:
             return None
         return [Content(i['item'], Media(i['media'])) for i in result['history']]
 
     async def get_watching(self, subscribed=0):
-        result = await self.api(f'/watching/serials', {'subscribed': subscribed})
+        result = await self.api('/watching/serials', {'subscribed': subscribed})
         if result is None:
             return None
         return [Content(i) for i in result['items']]
 
     async def get_tv(self):
-        result = await self.api(f'/tv')
+        result = await self.api('/tv')
         if result is None:
             return None
         return [Channel(i) for i in result['channels']]
@@ -138,7 +139,11 @@ class KinoPub:
         return [Content(i) for i in result['items']]
 
     async def notify(self, device_id):
-        await self.api(f'/device/notify', {'title': "KP-MSX", 'hardware': LENNY, 'software': device_id}, method='POST')
+        await self.api(
+            '/device/notify',
+            {'title': 'KP-MSX', 'hardware': LENNY, 'software': device_id},
+            method='POST',
+        )
 
     async def toggle_watched(self, content_id, season=None, episode=None):
         params = {'id': content_id}
@@ -146,17 +151,22 @@ class KinoPub:
             params['season'] = season
         if episode is not None:
             params['video'] = episode
-        await self.api(f'/watching/toggle', params)
+        await self.api('/watching/toggle', params)
 
     async def toggle_subscription(self, content_id):
         await self.api('/watching/togglewatchlist', {'id': content_id})
 
     async def toggle_bookmark(self, content_id, folder_id):
-        await self.api('/bookmarks/toggle-item', {'item': content_id, 'folder': folder_id}, method='POST')
+        await self.api(
+            '/bookmarks/toggle-item',
+            {'item': content_id, 'folder': folder_id},
+            method='POST',
+        )
 
     async def get_current_device_info(self):
         data = await self.api('/device/info')
         from models.Device import Device
+
         return Device(data.get('device', {}))
 
     FOURK_SETTING = 'support4k'
@@ -165,7 +175,9 @@ class KinoPub:
     MIXED_PLAYLIST_SETTING = 'mixedPlaylist'
     SERVER_LOCATION_SETTING = 'serverLocation'
 
-    async def update_device_setting(self, device_id: int, name: str, value: 'bool | int'):
+    async def update_device_setting(
+        self, device_id: int, name: str, value: 'bool | int'
+    ):
         await self.api(f'/device/{device_id}/settings', {name: value}, 'POST')
 
     @staticmethod
@@ -173,10 +185,12 @@ class KinoPub:
         params = {
             'grant_type': 'device_code',
             'client_id': config.KP_CLIENT_ID,
-            'client_secret': config.KP_CLIENT_SECRET
+            'client_secret': config.KP_CLIENT_SECRET,
         }
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as s:
-            response = await s.post('https://api.service-kp.com/oauth2/device', params=params)
+            response = await s.post(
+                'https://api.service-kp.com/oauth2/device', params=params,
+            )
             result = await response.json()
             return result['user_code'], result['code']
 
@@ -186,10 +200,12 @@ class KinoPub:
             'grant_type': 'device_token',
             'client_id': config.KP_CLIENT_ID,
             'client_secret': config.KP_CLIENT_SECRET,
-            'code': code
+            'code': code,
         }
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as s:
-            response = await s.post('https://api.service-kp.com/oauth2/device', params=params)
+            response = await s.post(
+                'https://api.service-kp.com/oauth2/device', params=params,
+            )
             result = await response.json()
             if result.get('error') is not None:
                 return None
@@ -200,15 +216,19 @@ class KinoPub:
             'grant_type': 'refresh_token',
             'client_id': config.KP_CLIENT_ID,
             'client_secret': config.KP_CLIENT_SECRET,
-            'refresh_token': self.refresh
+            'refresh_token': self.refresh,
         }
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as s:
-            response = await s.post('https://api.service-kp.com/oauth2/device', params=params)
+            response = await s.post(
+                'https://api.service-kp.com/oauth2/device', params=params,
+            )
             result = await response.json()
             if result.get('error') is not None:
                 return False
 
-            db.update_tokens(self.token, result['access_token'], result['refresh_token'])
+            db.update_tokens(
+                self.token, result['access_token'], result['refresh_token']
+            )
             self.token = result['access_token']
             self.refresh = result['refresh_token']
 
@@ -217,4 +237,3 @@ class KinoPub:
     async def get_available_servers(self):
         result = await self.api('/references/server-location')
         return [Reference(i) for i in result.get('items', [])]
-

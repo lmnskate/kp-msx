@@ -1,6 +1,6 @@
 def get_migrations():
-  return [
-    '''
+    return [
+        """
     CREATE TABLE IF NOT EXISTS devices (
         id TEXT PRIMARY KEY,
         code TEXT,
@@ -12,5 +12,5 @@ def get_migrations():
 
     CREATE TABLE IF NOT EXISTS domains (domain TEXT PRIMARY KEY);
     INSERT OR IGNORE INTO migrations VALUES (1, \'initial\');
-    '''
-  ]
+    """
+    ]

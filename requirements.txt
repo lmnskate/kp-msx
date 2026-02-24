@@ -1,4 +1,4 @@
-pymongo~=4.7.0
-uvicorn~=0.29.0
-fastapi~=0.110.2
-aiohttp~=3.9.5
+uvicorn
+fastapi
+aiohttp
+pydantic-settings

@@ -1,11 +1,10 @@
 from models.Folder import Folder
 from models.Season import Season
 from models.Video import Video
-from util import msx, hacks
+from util import hacks, msx
 
 
 class Content:
-
     def __init__(self, data, media=None):
         self.media = media
 
@@ -30,16 +29,19 @@ class Content:
         self.rating = data.get('imdb_rating') or data.get('kinopoinsk_rating')
         self.is_4k = data.get('quality') == 2160
 
-        self.bookmarks = data.get('bookmarks')
-        if self.bookmarks is not None and isinstance(self.bookmarks, list):
-            self.bookmarks = [Folder(i).id for i in self.bookmarks]
+        bookmarks = data.get('bookmarks')
+        self.bookmarks = (
+            list(Folder(i).id for i in bookmarks)
+            if isinstance(bookmarks, list)
+            else bookmarks
+        )
 
         self.watched = data.get('watched') == 1
 
         self.videos = None
 
         if (videos := data.get('videos')) is not None:
-           self.videos = [Video(i, self.id, self.title) for i in videos]
+            self.videos = [Video(i, self.id, self.title) for i in videos]
 
         self.seasons = None
 
@@ -58,246 +60,278 @@ class Content:
         entry = {
             'title': self.title,
             'image': self.small_poster if small_poster else self.poster,
-            "action": msx.format_action('/msx/content', params={'content_id': self.id}, module='panel')
+            'action': msx.format_action(
+                '/msx/content', params={'content_id': self.id}, module='panel',
+            ),
         }
+
         if self.media is not None and self.media.season > 0:
             entry['titleFooter'] = self.media.to_subtitle()
         else:
-            entry['titleFooter'] = ''
-            if self.rating:
-                entry['titleFooter'] += f' {{ico:stars}} {self.rating}'
             if self.year:
-                entry['titleFooter'] += f' {{ico:calendar-month}} {self.year}'
-            if self.new_episodes is not None:
-                entry['titleFooter'] += f' {{ico:new-releases}} {self.new_episodes}'
+                entry['titleFooter'] = str(self.year)
+            if self.rating:
+                entry['tag'] = str(self.rating)
+                entry['tagColor'] = 'msx-yellow'
             if self.is_4k:
-                entry['titleFooter'] += f' {{ico:4k}}'
+                entry['badge'] = '4K'
+                entry['badgeColor'] = 'msx-blue'
+            if self.new_episodes is not None:
+                entry['stamp'] = f'+{self.new_episodes}'
+                entry['stampColor'] = 'msx-yellow'
 
-            entry['titleFooter'] = entry['titleFooter'].strip()
         return entry
 
     def msx_action(self, proxy: bool = False, alternative_player: bool = False):
         if self.videos is not None:
             if len(self.videos) == 1:
-                return self.videos[0].msx_action(proxy=proxy, alternative_player=alternative_player)
+                return self.videos[0].msx_action(
+                    proxy=proxy, alternative_player=alternative_player,
+                )
             else:
-                return msx.format_action('/msx/multivideo', params={'content_id': self.id}, module='panel')
+                return msx.format_action(
+                    '/msx/multivideo', params={'content_id': self.id}, module='panel',
+                )
         if self.seasons is not None:
-            return msx.format_action('/msx/seasons', params={'content_id': self.id}, module='panel')
+            return msx.format_action(
+                '/msx/seasons', params={'content_id': self.id}, module='panel'
+            )
 
-    SUBSCRIPTION_BUTTON_ID = "subscription_button"
-    BOOKMARK_BUTTON_ID = "bookmark_button"
-    WATCH_BUTTON_ID = "watch_button"
-    TRAILER_BUTTON_ID = "trailer_button"
+    SUBSCRIPTION_BUTTON_ID = 'subscription_button'
+    BOOKMARK_BUTTON_ID = 'bookmark_button'
+    WATCH_BUTTON_ID = 'watch_button'
+    TRAILER_BUTTON_ID = 'trailer_button'
 
     def to_subscription_button(self):
         if self.subscribed:
-            label = "{ico:msx-yellow:new-releases}"
+            label = '{ico:msx-yellow:new-releases}'
         else:
-            label = "{ico:msx-white:new-releases}"
-        button = {
-            "id": self.SUBSCRIPTION_BUTTON_ID,
-            "type": "button",
-            "layout": f"6,5,1,1",
-            "label": label,
-            'action': msx.format_action('/msx/toggle_subscription', params={'content_id': self.id}, module='execute'),
+            label = '{ico:msx-white:new-releases}'
+        return {
+            'id': self.SUBSCRIPTION_BUTTON_ID,
+            'type': 'button',
+            'layout': '6,5,1,1',
+            'label': label,
+            'action': msx.format_action(
+                '/msx/toggle_subscription',
+                params={'content_id': self.id},
+                module='execute',
+            ),
         }
-
-        return button
 
     def to_bookmark_button(self):
         if self.in_bookmarks():
-            label = "{ico:msx-yellow:bookmark}"
+            label = '{ico:msx-yellow:bookmark}'
         else:
-            label = "{ico:msx-white:bookmark}"
-
-        button = {
-            "id": self.BOOKMARK_BUTTON_ID,
-            "type": "button",
-            "layout": f"7,5,1,1",
-            "label": label,
-            'action': msx.format_action('/msx/content/bookmarks', params={'content_id': self.id}, module='panel')
+            label = '{ico:msx-white:bookmark}'
+        return {
+            'id': self.BOOKMARK_BUTTON_ID,
+            'type': 'button',
+            'layout': '7,5,1,1',
+            'label': label,
+            'action': msx.format_action(
+                '/msx/content/bookmarks', params={'content_id': self.id}, module='panel',
+            ),
         }
 
-        return button
-
-
-    def to_trailer_button(self, qty, proxy: bool = False, alternative_player: bool = False):
-        props = {
-            'trigger:background': 'player:button:eject:execute'
-        }
-
+    def to_trailer_button(
+        self, qty, proxy: bool = False, alternative_player: bool = False
+    ):
+        props = {'trigger:background': 'player:button:eject:execute'}
         props.update(msx.DEFAULT_PLAY_BUTTON_PROPS)
-
-        button = {
-            "id": self.TRAILER_BUTTON_ID,
-            "type": "button",
-            "layout": f"{7-qty},5,1,1",
-            "label": '{ico:msx-white:movie}',
-            "playerLabel": f'Трейлер {self.title}',
+        return {
+            'id': self.TRAILER_BUTTON_ID,
+            'type': 'button',
+            'layout': f'{7 - qty},5,1,1',
+            'label': '{ico:msx-white:movie}',
+            'playerLabel': f'Трейлер {self.title}',
             'properties': props,
-            'action': msx.play_action(self.trailer, proxy=proxy, alternative_player=alternative_player),
+            'action': msx.play_action(
+                self.trailer, proxy=proxy, alternative_player=alternative_player
+            ),
         }
 
-        return button
-
-    def to_msx_panel(self,
-                     proxy: bool = False,
-                     alternative_player: bool = False,
-                     small_poster: bool = False):
-
+    def to_msx_panel(
+        self,
+        proxy: bool = False,
+        alternative_player: bool = False,
+        small_poster: bool = False,
+    ):
         buttons = [self.to_bookmark_button()]
 
         if self.seasons:
             buttons.append(self.to_subscription_button())
 
         if self.trailer:
-            buttons.append(self.to_trailer_button(len(buttons), proxy=proxy, alternative_player=alternative_player))
+            buttons.append(
+                self.to_trailer_button(
+                    len(buttons), proxy=proxy, alternative_player=alternative_player
+                )
+            )
 
         watch_button = {
-            "id": self.WATCH_BUTTON_ID,
-            "type": "button",
-            "layout": f"4,5,{4-len(buttons)},1",
-            "label": "Смотреть" if len(buttons) <= 2 else "{ico:msx-white:play-circle-outline}",
-            "playerLabel": self.title,
+            'id': self.WATCH_BUTTON_ID,
+            'type': 'button',
+            'layout': f'4,5,{4 - len(buttons)},1',
+            'label': (
+                'Смотреть'
+                if len(buttons) <= 2
+                else '{ico:msx-white:play-circle-outline}'
+            ),
+            'playerLabel': self.title,
             'focus': True,
-            'action': self.msx_action(proxy=proxy, alternative_player=alternative_player),
+            'action': self.msx_action(
+                proxy=proxy, alternative_player=alternative_player
+            ),
         }
 
         if self.videos is not None and len(self.videos) == 1:
-            watch_button['properties'] = self.videos[0].msx_properties(proxy=proxy, alternative_player=alternative_player)
+            watch_button['properties'] = self.videos[0].msx_properties(
+                proxy=proxy, alternative_player=alternative_player
+            )
 
         buttons = [watch_button] + buttons
 
-        stamp = ''
+        teaser = {
+            'id': 'teaser',
+            'type': 'teaser',
+            'layout': '0,0,4,6',
+            'image': self.small_poster if small_poster else self.poster,
+            'imageFiller': 'height-left',
+            'imageOverlay': 2,
+            'action': 'focus:plot',
+        }
         if self.rating:
-            stamp += f' {{ico:stars}} {self.rating}'
+            teaser['badge'] = str(self.rating)
+            teaser['badgeColor'] = 'msx-yellow'
         if self.year:
-            stamp += f' {{ico:calendar-month}} {self.year}'
+            teaser['tag'] = str(self.year)
+            teaser['tagColor'] = 'msx-glass'
         if self.is_4k:
-            stamp += f' {{ico:4k}}'
+            teaser['stamp'] = '4K'
+            teaser['stampColor'] = 'msx-blue'
 
-        stamp = stamp.strip()
-        if len(stamp) == 0:
-            stamp = None
+        page_items = [
+            teaser,
+            {
+                'type': 'default',
+                'layout': '4,0,4,5',
+                'text': self.plot,
+                'action': 'focus:plot',
+            },
+        ]
+        page_items.extend(buttons)
 
         return {
-            "type": "pages",
-            "headline": self.title,
-            "pages": [
+            'type': 'pages',
+            'headline': self.title,
+            'pages': [
                 {
-                    "items": [
-                        {
-                            'id': 'teaser',
-                            "type": "teaser",
-                            "layout": "0,0,4,6",
-                            "image": self.small_poster if small_poster else self.poster,
-                            "imageFiller": "height-left",
-                            'action': 'focus:plot',
-                            'stamp': stamp
-                        },
-                        {
-                            "type": "default",
-                            "layout": "4,0,4,5",
-                            "text": self.plot,
-                            'action': 'focus:plot'
-                        }
-                    ] + buttons
-                }, {
+                    'items': page_items,
+                },
+                {
                     'items': [
                         {
                             'id': 'plot',
-                            "type": "default",
-                            "layout": "0,0,8,6",
-                            "text": self.plot,
-                            'action': 'focus:teaser'
+                            'type': 'default',
+                            'layout': '0,0,8,6',
+                            'text': self.plot,
+                            'action': 'focus:teaser',
                         }
-                    ]
-                }
-            ]
-
+                    ],
+                },
+            ],
         }
 
     def to_seasons_msx_panel(self):
-        entry = {
-            "type": "list",
-            "headline": self.title,
-            "template": {
-                'enumerate': False,
-                "type": "button",
-                'layout': "0,0,2,1",
-                'stampColor': 'msx-glass',
-            },
-            "items": []
-        }
-
-        for season in self.seasons:
-            entry['items'].append({
-                "label": f"Cезон {season.n}",
-                'stamp': '{ico:check}' if season.watched else None,
-                'focus': not season.watched,
-                "action": msx.format_action('/msx/episodes', params={'content_id': self.id, 'season': season.n}, module='panel')
-            })
-        return entry
-
-    def to_multivideo_msx_panel(self, proxy: bool = False, alternative_player: bool = False):
-        entry = {
-            "type": "list",
-            "headline": self.title,
+        return {
+            'type': 'list',
+            'headline': self.title,
             'template': {
                 'enumerate': False,
-                "type": "button",
-                "layout": f"0,0,8,1",
+                'type': 'button',
+                'layout': '0,0,2,1',
+                'stampColor': 'msx-glass',
+            },
+            'items': list(
+                {
+                    'label': f'Cезон {season.n}',
+                    'stamp': '{ico:check}' if season.watched else None,
+                    'focus': not season.watched,
+                    'action': msx.format_action(
+                        '/msx/episodes',
+                        params={'content_id': self.id, 'season': season.n},
+                        module='panel',
+                    ),
+                }
+                for season in self.seasons
+            ),
+        }
+
+    def to_multivideo_msx_panel(
+        self, proxy: bool = False, alternative_player: bool = False
+    ):
+        return {
+            'type': 'list',
+            'headline': self.title,
+            'template': {
+                'enumerate': False,
+                'type': 'button',
+                'layout': '0,0,8,1',
                 'stampColor': 'msx-glass',
                 'playerLabel': self.title,
             },
-            "items": [i.to_multivideo_entry(proxy=proxy, alternative_player=alternative_player) for i in self.videos]
+            'items': [
+                i.to_multivideo_entry(
+                    proxy=proxy, alternative_player=alternative_player
+                )
+                for i in self.videos
+            ],
         }
-        return entry
 
-    def to_episodes_msx_panel(self, season_number, proxy: bool = False, alternative_player: bool = False):
-        for season in self.seasons:
-            if season.n == season_number:
-                break
-        entry = {
-            "type": "list",
-            "headline": f'{self.title} [S{season.n}]',
+    def to_episodes_msx_panel(
+        self, season_number, proxy: bool = False, alternative_player: bool = False,
+    ):
+        season = next(s for s in self.seasons if s.n == season_number)
+        return {
+            'type': 'list',
+            'headline': f'{self.title} [S{season.n}]',
             'template': {
-                "type": "button",
-                "layout": f"0,0,8,1",
+                'type': 'button',
+                'layout': '0,0,8,1',
                 'stampColor': 'msx-glass',
             },
-            "items": season.to_episode_pages(proxy=proxy, alternative_player=alternative_player)
+            'items': season.to_episode_pages(
+                proxy=proxy, alternative_player=alternative_player
+            ),
         }
-        return entry
 
     def in_bookmarks(self):
         return self.bookmarks is not None and len(self.bookmarks) > 0
 
     def to_bookmark_stamp(self, folder_id):
+        return msx.stamp(folder_id in self.bookmarks)
+
+    def to_bookmarks_msx_panel(self, folders):
         return {
-            'stampColor': 'msx-glass' if folder_id in self.bookmarks else 'transparent',
-            'stamp': '{ico:check}' if folder_id in self.bookmarks else '{ico:blank}'
-        }
-
-    def to_bookmarks_msx_panel(self, folders: 'list[Folder]'):
-        entry = {
-            "type": "list",
-            "headline": 'Закладки',
-            "template": {
+            'type': 'list',
+            'headline': 'Закладки',
+            'template': {
                 'enumerate': False,
-                "type": "button",
-                'layout': "0,0,4,1",
+                'type': 'button',
+                'layout': '0,0,4,1',
             },
-            "items": []
+            'items': list(
+                {
+                    'id': str(folder.id),
+                    'label': folder.title,
+                    'action': msx.format_action(
+                        '/msx/toggle_bookmark',
+                        params={'content_id': self.id, 'folder_id': folder.id},
+                        module='execute',
+                    ),
+                    **self.to_bookmark_stamp(folder.id),
+                }
+                for folder in folders
+            ),
         }
-        for folder in folders:
-            subentry = {
-                "id": str(folder.id),
-                "label": folder.title,
-                "action": msx.format_action('/msx/toggle_bookmark', params={'content_id': self.id, 'folder_id': folder.id}, module='execute')
-            }
-            subentry.update(self.to_bookmark_stamp(folder.id))
-            entry['items'].append(subentry)
-        return entry
-

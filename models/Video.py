@@ -1,14 +1,8 @@
-from urllib.parse import urlencode
-
-import config
 from models.Playable import Playable
-from models.SubtitleTrack import SubtitleTrack
 from util import msx
-from util.msx import content
-from util.proxy import remember_domain, make_proxy_url
+
 
 class Video(Playable):
-
     def __init__(self, data, content_id, content_title):
         super().__init__(data)
 
@@ -17,20 +11,23 @@ class Video(Playable):
 
         self.title = data.get('title')
 
-    def to_multivideo_entry(self, proxy: bool = False, alternative_player: bool = False):
-        entry = {
-            "label": self.title,
-            'action': self.msx_action(proxy=proxy, alternative_player=alternative_player),
-            'properties': self.msx_properties(proxy=proxy, alternative_player=alternative_player)
+    def to_multivideo_entry(
+        self, proxy: bool = False, alternative_player: bool = False,
+    ):
+        return {
+            'label': self.title,
+            'action': self.msx_action(
+                proxy=proxy, alternative_player=alternative_player,
+            ),
+            'properties': self.msx_properties(
+                proxy=proxy, alternative_player=alternative_player,
+            ),
         }
-        return entry
-
 
     def trigger_ready(self):
-        params = {
-            'content_id': self.content_id
-        }
-        return msx.format_action('/msx/play', params=params, module='execute')
+        return msx.format_action(
+            '/msx/play', params={'content_id': self.content_id}, module='execute',
+        )
 
     def resume_key(self):
         return str(self.content_id) + ' ' + self.player_title() + ' ' + self.title

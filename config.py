@@ -1,17 +1,48 @@
-import os
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-MSX_HOST = os.environ.get('RENDER_EXTERNAL_URL') or os.environ.get('MSX_HOST')
-MONGODB_URL = os.environ.get('MONGODB_URL')
-MONGODB_COLLECTION = os.environ.get('MONGODB_COLLECTION') or 'kp'
-SQLITE_URL = os.environ.get('SQLITE_URL') or './kp-sqlite.db'
-IS_SQLITE = (MONGODB_URL is None or len(MONGODB_URL) == 0) and len(SQLITE_URL) > 0
-PORT = os.environ.get('PORT') or 10000
-PLAYER = os.environ.get('PLAYER') or 'https://slonopot.github.io/msx-hlsx/hlsx.html'
-ALTERNATIVE_PLAYER = os.environ.get('ALTERNATIVE_PLAYER') or 'http://msx.benzac.de/plugins/html5x.html'
-KP_CLIENT_ID = os.environ.get('KP_CLIENT_ID') or 'xbmc'
-KP_CLIENT_SECRET = os.environ.get('KP_CLIENT_SECRET') or 'cgg3gtifu46urtfp2zp1nqtba0k2ezxh'
-QUALITY = os.environ.get('QUALITY')
-PROTOCOL = os.environ.get('PROTOCOL') or 'hls4'
-TIZEN = os.environ.get('TIZEN') == 'yes'
-POSTERS_HOST_REPLACEMENT = os.environ.get('POSTERS_HOST_REPLACEMENT') or None
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file='.env',
+        env_prefix='KP_MSX_',
+        extra='ignore',
+    )
+
+    msx_host: str | None = None
+    sqlite_url: str = './kp-sqlite.db'
+    port: int = 10000
+    player: str = 'https://slonopot.github.io/msx-hlsx/hlsx.html'
+    alternative_player: str = 'http://msx.benzac.de/plugins/html5x.html'
+    kp_client_id: str = 'xbmc'
+    kp_client_secret: str = 'cgg3gtifu46urtfp2zp1nqtba0k2ezxh'
+    quality: str | None = None
+    protocol: str = 'hls4'
+    tizen: bool = False
+    posters_host_replacement: str | None = None
+    render_external_url: str | None = Field(
+        default=None,
+        validation_alias='RENDER_EXTERNAL_URL',
+    )
+
+    @field_validator('tizen', mode='before')
+    @classmethod
+    def parse_tizen(cls, value):
+        if isinstance(value, str):
+            return value.strip().lower() in {'1', 'true', 'yes', 'on'}
+        return value
+
+
+settings = Settings()
+
+MSX_HOST = settings.render_external_url or settings.msx_host
+SQLITE_URL = settings.sqlite_url
+PORT = settings.port
+PLAYER = settings.player
+ALTERNATIVE_PLAYER = settings.alternative_player
+KP_CLIENT_ID = settings.kp_client_id
+KP_CLIENT_SECRET = settings.kp_client_secret
+QUALITY = settings.quality
+PROTOCOL = settings.protocol
+TIZEN = settings.tizen
+POSTERS_HOST_REPLACEMENT = settings.posters_host_replacement
