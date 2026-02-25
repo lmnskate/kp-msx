@@ -14,8 +14,8 @@ class Settings(BaseSettings):
     port: int = 10000
     player: str = 'https://slonopot.github.io/msx-hlsx/hlsx.html'
     alternative_player: str = 'http://msx.benzac.de/plugins/html5x.html'
-    kp_client_id: str = 'xbmc'
-    kp_client_secret: str = 'cgg3gtifu46urtfp2zp1nqtba0k2ezxh'
+    kp_client_id: str
+    kp_client_secret: str
     quality: str | None = None
     protocol: str = 'hls4'
     tizen: bool = False

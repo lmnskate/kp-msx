@@ -139,7 +139,7 @@ def already_registered():
                         'layout': '0,0,8,3',
                         'color': 'msx-glass',
                         'alignment': 'center',
-                        'headline': '{ico:check-circle} Уже зарегистрирован',
+                        'headline': 'Уже зарегистрирован',
                         'text': 'Это устройство уже привязано к аккаунту Kinopub.',
                     },
                 ]
@@ -167,7 +167,6 @@ def registration(user_code):
                     {
                         'type': 'button',
                         'layout': '2,3,4,1',
-                        'image': icon('check'),
                         'label': 'Я ввёл код',
                         'action': format_action(
                             '/msx/check_registration', module='execute',
