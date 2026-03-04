@@ -41,10 +41,10 @@ class Playable:
 
         props.update(msx.DEFAULT_PLAY_BUTTON_PROPS)
 
-        if alternative_player:
-            for track in self.subtitles:
-                props[f'html5x:subtitle:{track.lang}:{track.lang.upper()}'] = (
-                    track.url if not proxy else make_proxy_url(track.url)
-                )
+        subtitle_prefix = 'html5x' if alternative_player else 'hlsjs'
+        for track in self.subtitles:
+            props[f'{subtitle_prefix}:subtitle:{track.lang}:{track.lang.upper()}'] = (
+                track.url if not proxy else make_proxy_url(track.url)
+            )
 
         return props

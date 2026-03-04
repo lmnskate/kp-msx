@@ -310,7 +310,7 @@ def tv_channels(channels, alternative_player: bool = False):
             'properties': {
                 'control:type': 'extended',
                 'button:content:enable': 'false',
-                'button:restart:image': icon('settings'),
+                'button:restart:icon': 'settings',
                 'button:restart:action': player_action_btn(),
                 'progress:display': 'false',
             },
@@ -421,12 +421,12 @@ def player_action_btn():
 
 DEFAULT_PLAY_BUTTON_PROPS = {
     'control:type': 'extended',
-    'button:content:image': icon('list'),
-    'button:content:action': 'player:content',
-    'button:restart:image': icon('settings'),
+    'button:content:icon': 'audiotrack',
+    'button:content:action': 'panel:request:player:audiotrack',
+    'button:restart:icon': 'settings',
     'button:restart:action': player_action_btn(),
-    'button:speed:image': icon('replay'),
-    'button:speed:action': 'player:restart',
+    'button:speed:icon': 'subtitles',
+    'button:speed:action': 'panel:request:player:subtitle',
 }
 
 FOURK_ID = 'fourk'
