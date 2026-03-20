@@ -1,6 +1,4 @@
-from urllib.parse import urlencode
-
-import config
+from util import msx
 
 
 class Channel:
@@ -13,19 +11,11 @@ class Channel:
         self.stream = data.get('stream')
 
     def to_msx(self, alternative_player: bool = False):
-        if alternative_player:
-            player = config.ALTERNATIVE_PLAYER
-        else:
-            player = config.PLAYER
-
-        if config.TIZEN:
-            action = f'video:{self.stream}'
-        else:
-            action = f'video:plugin:{player}?' + urlencode({'url': self.stream})
-
         return {
             'title': self.title,
             'playerLabel': self.title,
             'image': self.logo,
-            'action': action,
+            'action': msx.play_action(
+                self.stream, alternative_player=alternative_player
+            )
         }

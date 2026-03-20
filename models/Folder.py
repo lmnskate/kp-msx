@@ -14,6 +14,6 @@ class Folder:
                 '/msx/folder',
                 params={'folder': self.id, 'page': '{PAGE}'},
                 interaction='/paging.html',
-                module='content',
-            ),
+                module='content'
+            )
         }

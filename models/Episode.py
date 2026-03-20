@@ -3,7 +3,12 @@ from util import msx
 
 
 class Episode(Playable):
-    def __init__(self, data, content_id, season):
+    def __init__(
+        self,
+        data,
+        content_id,
+        season
+    ):
         super().__init__(data)
 
         self.content_id = content_id
@@ -24,9 +29,13 @@ class Episode(Playable):
         params = {
             'content_id': self.content_id,
             'season': self.season,
-            'episode': self.n,
+            'episode': self.n
         }
-        return msx.format_action('/msx/play', params=params, module='execute')
+        return msx.format_action(
+            '/msx/play',
+            params=params,
+            module='execute'
+        )
 
     def resume_key(self):
-        return str(self.content_id) + ' ' + self.player_title()
+        return f'{self.content_id} {self.player_title()}'

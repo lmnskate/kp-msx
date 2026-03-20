@@ -1,14 +1,27 @@
 from urllib.parse import urlencode
 
-import config
+from config.globals import ALTERNATIVE_PLAYER_URL, LENNY, PLAYER_URL, SAD_LENNY
+from config.settings import server
 from util.proxy import make_proxy_url
 
-LENNY = '¯\\_(ツ)_/¯'
-SAD_LENNY = '(◡︵◡)'
+POSTER_TEMPLATE = {
+    'imageFiller': 'height-center',
+    'title': 'Title'
+}
+
+DEFAULT_PLAY_BUTTON_PROPS = {
+    'control:type': 'extended',
+    'button:content:icon': 'audiotrack',
+    'button:content:action': 'panel:request:player:audiotrack',
+    'button:restart:icon': 'settings',
+    'button:restart:action': 'panel:request:player:options',
+    'button:speed:icon': 'subtitles',
+    'button:speed:action': 'panel:request:player:subtitle'
+}
 
 
 def icon(name):
-    return f'{config.MSX_HOST}/icons/{name}.svg'
+    return f'{server.host}/icons/{name}.svg'
 
 
 def format_action(
@@ -16,30 +29,28 @@ def format_action(
     params: dict = None,
     interaction: str = None,
     options: str = None,
-    module: str = None,
+    module: str = None
 ):
-    if params is None:
-        params = {}
-    params.update({'id': '{ID}'})
+    params = {**(params or {}), 'id': '{ID}'}
 
     if path.startswith('/'):
-        data = f'{config.MSX_HOST}{path}'
+        data = f'{server.host}{path}'
     else:
         data = path
 
-    data = data + '?' + urlencode(params, safe='{}')
+    data = f'{data}?{urlencode(params, safe="{}")}'
 
     if interaction:
         if interaction.startswith('/'):
-            interaction = f'{config.MSX_HOST}{interaction}'
+            interaction = f'{server.host}{interaction}'
 
-        data = 'request:interaction:' + data
+        data = f'request:interaction:{data}'
         if options:
-            data = data + '|' + options
-        data = data + '@' + interaction
+            data = f'{data}|{options}'
+        data = f'{data}@{interaction}'
 
     if module:
-        data = module + ':' + data
+        data = f'{module}:{data}'
 
     return data
 
@@ -53,8 +64,8 @@ def start():
         'launcher': {
             'parameter': format_action('/msx/menu', module='menu'),
             'image': icon('logo'),
-            'color': 'none',
-        },
+            'color': 'none'
+        }
     }
 
 
@@ -68,19 +79,19 @@ def unregistered_menu():
             {
                 'image': icon('key'),
                 'label': 'Регистрация',
-                'data': format_action('/msx/registration'),
+                'data': format_action('/msx/registration')
             }
-        ],
+        ]
     }
 
 
 def registered_menu(categories: list):
-    menu = list(
+    menu = [
         category.to_msx()
         for category in (categories or [])
         if not category.blacklisted
-    )
-    if len(menu) == 0:
+    ]
+    if not menu:
         menu = [sad_screen()]
     return {
         'reuse': False,
@@ -89,7 +100,7 @@ def registered_menu(categories: list):
         'refocus': 1,
         'headline': 'Kinopub',
         'options': settings_screen(),
-        'menu': menu,
+        'menu': menu
     }
 
 
@@ -109,7 +120,7 @@ def sad_screen():
                             'color': 'msx-glass',
                             'alignment': 'center',
                             'headline': 'Вот так вот',
-                            'text': 'Вы выключили все разделы меню, поэтому теперь здесь ничего нет.',
+                            'text': 'Вы выключили все разделы меню, поэтому теперь здесь ничего нет.'
                         },
                         {
                             'type': 'button',
@@ -117,13 +128,13 @@ def sad_screen():
                             'image': icon('refresh'),
                             'label': 'Вернуть назад',
                             'action': format_action(
-                                '/msx/settings/reset_menu', module='execute',
-                            ),
-                        },
-                    ],
+                                '/msx/settings/reset_menu', module='execute'
+                            )
+                        }
+                    ]
                 }
-            ],
-        },
+            ]
+        }
     }
 
 
@@ -140,11 +151,11 @@ def already_registered():
                         'color': 'msx-glass',
                         'alignment': 'center',
                         'headline': 'Уже зарегистрирован',
-                        'text': 'Это устройство уже привязано к аккаунту Kinopub.',
-                    },
+                        'text': 'Это устройство уже привязано к аккаунту Kinopub.'
+                    }
                 ]
             }
-        ],
+        ]
     }
 
 
@@ -162,19 +173,19 @@ def registration(user_code):
                         'alignment': 'center',
                         'headline': user_code,
                         'text': 'Используйте этот код для добавления устройства на Kinopub или зеркале.',
-                        'titleFooter': 'После ввода кода нажмите кнопку ниже.',
+                        'titleFooter': 'После ввода кода нажмите кнопку ниже.'
                     },
                     {
                         'type': 'button',
                         'layout': '2,3,4,1',
                         'label': 'Я ввёл код',
                         'action': format_action(
-                            '/msx/check_registration', module='execute',
-                        ),
-                    },
+                            '/msx/check_registration', module='execute'
+                        )
+                    }
                 ]
             }
-        ],
+        ]
     }
 
 
@@ -184,13 +195,29 @@ def code_not_entered():
             'status': 200,
             'data': {
                 'action': 'warn:Код не введён. Если прошло больше 5 минут, перезапустите приложение для получения нового кода.'
-            },
+            }
         }
     }
 
 
 def restart():
     return {'response': {'status': 200, 'data': {'action': 'reload'}}}
+
+
+def build_list(layout, items, *, template_extra=None, **kwargs):
+    template = {
+        'type': 'separate',
+        'layout': layout,
+        'color': 'msx-glass',
+    }
+    if template_extra:
+        template.update(template_extra)
+    return {
+        'type': 'list',
+        'template': template,
+        'items': items,
+        **kwargs
+    }
 
 
 def content_list(
@@ -200,84 +227,61 @@ def content_list(
     page=1,
     show_header=False,
     decompress=None,
-    small_posters=False,
+    small_posters=False
 ):
-    resp = {
-        'type': 'list',
-        'preload': 'next',
-        'template': {
-            'type': 'separate',
-            'layout': '0,0,2,4',
-            'color': 'msx-glass',
-            'imageFiller': 'height-center',
-            'imageOverlay': 2,
-            'title': 'Title',
-        },
-        'items': list(entry.to_msx(small_poster=small_posters) for entry in entries),
-    }
-
+    extra = {**POSTER_TEMPLATE, 'imageOverlay': 2}
     if decompress is not None:
-        resp['template']['decompress'] = decompress
+        extra['decompress'] = decompress
+
+    resp = build_list(
+        '0,0,2,4',
+        [entry.to_msx(small_poster=small_posters) for entry in entries],
+        template_extra=extra,
+        preload='next'
+    )
 
     if show_header and page == 1:
         from models.CategoryExtra import CategoryExtra
 
         resp['header'] = {
-            'items': list(
+            'items': [
                 i.to_msx(category) for i in CategoryExtra.static_extras()
-            ),
+            ]
         }
 
     return resp
 
 
 def collections(entries, *, small_posters=False):
-    return {
-        'type': 'list',
-        'preload': 'next',
-        'template': {
-            'type': 'separate',
-            'layout': '0,0,3,6',
-            'color': 'msx-glass',
-            'imageFiller': 'height-center',
-            'imageOverlay': 3,
-            'title': 'Title',
-        },
-        'items': list(entry.to_msx(small_poster=small_posters) for entry in entries),
-    }
+    return build_list(
+        '0,0,3,6',
+        [entry.to_msx(small_poster=small_posters) for entry in entries],
+        template_extra={**POSTER_TEMPLATE, 'imageOverlay': 3},
+        preload='next'
+    )
 
 
 def bookmark_folders(result):
-    return {
-        'type': 'list',
-        'headline': 'Закладки',
-        'template': {
-            'type': 'separate',
-            'layout': '0,0,4,1',
-            'color': 'msx-glass',
-        },
-        'items': list(i.to_msx() for i in result),
-    }
+    return build_list(
+        '0,0,4,1',
+        [i.to_msx() for i in result],
+        headline='Закладки'
+    )
 
 
 def genre_folders(category, result):
-    return {
-        'type': 'list',
-        'headline': 'Жанры',
-        'template': {
-            'type': 'separate',
-            'layout': '0,0,4,1',
-            'color': 'msx-glass',
-        },
-        'items': list(i.to_msx(category) for i in result),
-    }
+    return build_list(
+        '0,0,4,1',
+        [i.to_msx(category) for i in result],
+        headline='Жанры'
+    )
 
 
 def update_panel(content_id, value):
     return {
         'response': {
             'status': 200,
-            'data': {'action': f'update:panel:{content_id}', 'data': value},
+            'data': {'action': f'update:panel:{content_id}', 'data': value}
         }
     }
 
@@ -297,7 +301,7 @@ def tv_channels(channels, alternative_player: bool = False):
                     'color': 'msx-glass',
                     'headline': 'Спортивные каналы предоставляются в качестве бонуса и работают «как есть»',
                     'titleFooter': 'Для просмотра полноценного онлайн-ТВ с архивом рекомендуется использовать другие сервисы',
-                    'action': '[]',
+                    'action': '[]'
                 }
             ]
         },
@@ -312,13 +316,13 @@ def tv_channels(channels, alternative_player: bool = False):
                 'button:content:enable': 'false',
                 'button:restart:icon': 'settings',
                 'button:restart:action': player_action_btn(),
-                'progress:display': 'false',
-            },
+                'progress:display': 'false'
+            }
         },
         'items': [
             channel.to_msx(alternative_player=alternative_player)
             for channel in channels
-        ],
+        ]
     }
 
 
@@ -329,28 +333,28 @@ def handle_exception(error_page=False):
         'color': 'msx-glass',
         'alignment': 'center',
         'headline': 'Произошла ошибка загрузки',
-        'text': 'Скорее всего, кинопаб сейчас недоступен. Проверьте статус на kinopub.online и ожидайте ремонта.',
+        'text': 'Скорее всего, кинопаб сейчас недоступен. Проверьте статус на kinopub.online и ожидайте ремонта.'
     }
     restart_app_btn = {
         'type': 'button',
         'layout': '1,2,6,1',
         'image': icon('refresh'),
         'label': 'Перезапустить приложение',
-        'action': 'reload',
+        'action': 'reload'
     }
     reload_content_btn = {
         'type': 'button',
         'layout': '1,3,6,1',
         'image': icon('refresh'),
         'label': 'Перезагрузить раздел',
-        'action': 'reload:content',
+        'action': 'reload:content'
     }
     reload_panel_btn = {
         'type': 'button',
         'layout': '1,4,6,1',
         'image': icon('web'),
         'label': 'Перезагрузить окно',
-        'action': 'reload:panel',
+        'action': 'reload:panel'
     }
 
     if error_page:
@@ -362,7 +366,7 @@ def handle_exception(error_page=False):
         'menu': [{'label': LENNY, 'data': format_action('/msx/error')}],
         'type': 'pages',
         'headline': 'Ошибка',
-        'pages': [{'items': items}],
+        'pages': [{'items': items}]
     }
 
 
@@ -381,7 +385,7 @@ def unsupported_version():
                         'alignment': 'center',
                         'headline': 'Старая версия MSX',
                         'text': 'Используемая версия MSX слишком старая. Выберите один из параметров ниже для обновления.',
-                        'titleFooter': 'При выборе web.msx.benzac.de используйте HTTPS. После обновления настройте кинопаб снова.',
+                        'titleFooter': 'При выборе web.msx.benzac.de используйте HTTPS. После обновления настройте кинопаб снова.'
                     },
                     {
                         'type': 'button',
@@ -392,8 +396,8 @@ def unsupported_version():
                         'data': {
                             'name': 'id:web',
                             'version': '2.0.3',
-                            'parameter': 'content:https://msx.benzac.de/services/web.php',
-                        },
+                            'parameter': 'content:https://msx.benzac.de/services/web.php'
+                        }
                     },
                     {
                         'type': 'button',
@@ -404,41 +408,17 @@ def unsupported_version():
                         'data': {
                             'name': 'web.msx.benzac.de',
                             'version': '1.0.2',
-                            'parameter': 'content:http://web.msx.benzac.de/msx/start.json',
-                        },
-                    },
+                            'parameter': 'content:http://web.msx.benzac.de/msx/start.json'
+                        }
+                    }
                 ]
             }
-        ],
+        ]
     }
 
 
 def player_action_btn():
-    if config.TIZEN:
-        return 'content:request:interaction:init@https://msx.benzac.de/interaction/tizen.html'
     return 'panel:request:player:options'
-
-
-DEFAULT_PLAY_BUTTON_PROPS = {
-    'control:type': 'extended',
-    'button:content:icon': 'audiotrack',
-    'button:content:action': 'panel:request:player:audiotrack',
-    'button:restart:icon': 'settings',
-    'button:restart:action': player_action_btn(),
-    'button:speed:icon': 'subtitles',
-    'button:speed:action': 'panel:request:player:subtitle',
-}
-
-FOURK_ID = 'fourk'
-HDR_ID = 'hdr'
-HEVC_ID = 'hevc'
-MIXED_PLAYLIST_ID = 'mixed_playlist'
-SERVER_ID = 'server'
-PROXY_ID = 'proxy'
-ALTERNATIVE_PLAYER_ID = 'alternative_player'
-SMALL_POSTERS_ID = 'small_posters'
-MENU_ID = 'menu'
-HELP_ID = 'help'
 
 
 def settings_screen(screen: bool = False):
@@ -448,7 +428,7 @@ def settings_screen(screen: bool = False):
         'template': {
             'enumerate': False,
             'type': 'control',
-            'layout': '0,0,6,1' if screen else '0,0,8,1',
+            'layout': '0,0,6,1' if screen else '0,0,8,1'
         },
         'items': [
             {
@@ -456,21 +436,21 @@ def settings_screen(screen: bool = False):
                 'action': format_action('/msx/settings', module='panel'),
                 'image': icon('logo'),
                 'imageWidth': 'small',
-                'restore': False,
+                'restore': False
             },
             {
                 'label': 'Настройки Media Station X',
                 'action': 'settings',
                 'image': icon('settings'),
-                'imageWidth': 'small',
+                'imageWidth': 'small'
             },
             {
                 'label': 'Перезапустить приложение',
                 'action': 'reload',
                 'image': icon('refresh'),
-                'imageWidth': 'small',
-            },
-        ],
+                'imageWidth': 'small'
+            }
+        ]
     }
 
     if screen:
@@ -481,7 +461,7 @@ def settings_screen(screen: bool = False):
                 'id': 'info',
                 'offset': '-6,1,6,1',
                 'headline': 'Настройки можно также открыть из главного меню (слева) нажатием синей цветной [{ico:msx-blue:stop}] кнопки или кнопки "меню" [{ico:menu}] на пульте. Подсказка находится справа снизу экрана.\nЭтот (и любой другой) пункт меню можно скрыть в разделе "Настройки Kinopub".',
-                'action': '[]',
+                'action': '[]'
             }
         )
 
@@ -493,14 +473,8 @@ def settings_menu(device_settings):
         'headline': 'Настройки Kinopub',
         'template': {'enumerate': False, 'type': 'control', 'layout': '0,0,4,1'},
         'items': [
-            device_settings.to_fourk_msx_button(),
-            device_settings.to_hdr_msx_button(),
-            device_settings.to_hevc_msx_button(),
-            device_settings.to_mixed_playlist_msx_button(),
+            *device_settings.to_toggle_buttons(),
             device_settings.to_server_msx_button(),
-            device_settings.to_proxy_msx_button(),
-            device_settings.to_alternative_player_msx_button(),
-            device_settings.to_small_posters_msx_button(),
             device_settings.to_menu_msx_button(),
             device_settings.to_help_msx_button(),
             {
@@ -509,16 +483,16 @@ def settings_menu(device_settings):
                 'id': 'info',
                 'offset': '0,0,4,1',
                 'headline': '',
-                'action': '[]',
-            },
-        ],
+                'action': '[]'
+            }
+        ]
     }
 
 
 def stamp(cond):
     return {
         'stampColor': 'msx-glass' if cond else 'transparent',
-        'stamp': '{ico:check}' if cond else '{ico:blank}',
+        'stamp': '{ico:check}' if cond else '{ico:blank}'
     }
 
 
@@ -531,7 +505,7 @@ def settings_button(id, label, action, hint):
         'id': id,
         'label': label,
         'action': action,
-        'selection': {'action': 'update:panel:info', 'data': {'headline': hint}},
+        'selection': {'action': 'update:panel:info', 'data': {'headline': hint}}
     }
 
 
@@ -543,18 +517,20 @@ def menu_entries_settings_panel(categories: list):
             'enumerate': False,
             'type': 'button',
             'layout': '0,0,4,1',
-            'stampColor': 'msx-glass',
+            'stampColor': 'msx-glass'
         },
-        'items': list(
-            i.to_msx_settings_button() for i in categories if not i.ignored
-        ),
+        'items': [
+            i.to_msx_settings_button() for i in categories if not i.hidden_from_settings
+        ]
     }
 
 
-def play_action(video_url, proxy: bool = False, alternative_player: bool = False):
+def play_action(
+    video_url,
+    proxy: bool = False,
+    alternative_player: bool = False
+):
     url = make_proxy_url(video_url) if proxy else video_url
-    player = config.ALTERNATIVE_PLAYER if alternative_player else config.PLAYER
+    player_url = ALTERNATIVE_PLAYER_URL if alternative_player else PLAYER_URL
 
-    if config.TIZEN:
-        return f'video:{url}'
-    return f'video:plugin:{player}?' + urlencode({'url': url})
+    return f'video:plugin:{player_url}?' + urlencode({'url': url})

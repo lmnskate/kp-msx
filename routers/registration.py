@@ -4,23 +4,36 @@ from starlette.requests import Request
 from models.KinoPub import KinoPub
 from util import msx
 
-router = APIRouter(prefix='/msx')
+router = APIRouter(
+    prefix='/msx'
+)
 
 
 @router.get('/registration')
-async def registration(request: Request):
+async def registration(
+    request: Request
+):
     if request.state.device.registered():
         return msx.already_registered()
-    user_code, device_code = await KinoPub.get_codes()
+    registration_codes = await KinoPub.get_codes()
+    if registration_codes is None:
+        return msx.handle_exception()
+
+    user_code, device_code = registration_codes
     request.state.device.update_code(device_code)
     return msx.registration(user_code)
 
 
 @router.post('/check_registration')
-async def check_registration(request: Request):
+async def check_registration(
+    request: Request
+):
     result = await KinoPub.check_registration(request.state.device.code)
     if result is None:
         return msx.code_not_entered()
-    request.state.device.update_tokens(result['access_token'], result['refresh_token'])
+    request.state.device.update_tokens(
+        result['access_token'],
+        result['refresh_token']
+    )
     await request.state.device.notify()
     return msx.restart()

@@ -12,14 +12,14 @@ Python 3.12+ required. No external database needed — SQLite is created automat
 
 ```bash
 # Clone and install
-git clone https://github.com/anon/kp-msx.git
+git clone https://github.com/llmnskate/kp-msx.git
 cd kp-msx
 python -m venv .venv
 .venv/bin/pip install -r requirements.txt
 
 # Configure
 cp .env.example .env
-# Edit .env — at minimum, set KP_MSX_MSX_HOST to http://<your-ip>:1234
+# Edit .env — at minimum, set SERVER_HOST to http://<your-ip>:1234
 ```
 
 > On Windows, use `.venv\Scripts\pip` and `.venv\Scripts\uvicorn` instead of `.venv/bin/`.
@@ -58,7 +58,7 @@ WorkingDirectory=/home/user/kp-msx
 
 EnvironmentFile=/home/user/kp-msx/.env
 
-ExecStart=/home/user/kp-msx/venv/bin/uvicorn api:app --host 0.0.0.0 --port 1234
+ExecStart=/home/user/kp-msx/.venv/bin/uvicorn api:app --host 0.0.0.0 --port 1234
 
 Restart=always
 RestartSec=5
@@ -89,29 +89,31 @@ journalctl -u kp-msx -f
 
 ## Environment variables
 
-All variables use the `KP_MSX_` prefix and are loaded from `.env`. See `.env.example` for a template.
+Variables are loaded from `.env`. See `.env.example` for a template.
 
-| Variable                          | Description                                           | Default           |
-|-----------------------------------|-------------------------------------------------------|------------------|
-| `KP_MSX_MSX_HOST`                 | Public URL of your server (used to generate links)    | **required**     |
-| `KP_MSX_PORT`                     | Port when running via `python api.py`                 | `10000`          |
-| `KP_MSX_SQLITE_URL`               | SQLite database path                                  | `./kp-sqlite.db` |
-| `KP_MSX_PROTOCOL`                 | Streaming protocol (`hls`, `hls2`, `hls4`, `http`)    | `hls4`           |
-| `KP_MSX_QUALITY`                  | Video quality for `http`/`hls` protocols              | max available    |
-| `KP_MSX_PLAYER`                   | Video player plugin URL                               | built-in hlsx    |
-| `KP_MSX_ALTERNATIVE_PLAYER`       | Fallback player for older devices                     | html5x           |
-| `KP_MSX_TIZEN`                    | Use Samsung Tizen built-in player instead of plugin   | `false`          |
-| `KP_MSX_KP_CLIENT_ID`             | KinoPub API client ID (write to support@kino.pub)     | **required**     |
-| `KP_MSX_KP_CLIENT_SECRET`         | KinoPub API client secret (write to support@kino.pub) | **required**     |
-| `KP_MSX_POSTERS_HOST_REPLACEMENT` | Override poster CDN hostname                          | —                |
+### Server (`SERVER_` prefix)
 
-On Render.com, `RENDER_EXTERNAL_URL` is used automatically in place of `KP_MSX_MSX_HOST`.
+| Variable             | Description                                        | Default           |
+|----------------------|----------------------------------------------------|-------------------|
+| `SERVER_HOST`        | Public URL of your server (used to generate links) | **required**      |
+| `SERVER_PORT`        | Port when running via `python api.py`              | `1234`            |
+| `SERVER_SQLITE_URL`  | SQLite database path                               | `./kp-sqlite.db`  |
+
+### KinoPub API (`KP_` prefix)
+
+| Variable           | Description                                           | Default  |
+|--------------------|-------------------------------------------------------|----------|
+| `KP_CLIENT_ID`     | KinoPub API client ID (write to support@kino.pub)     | **required** |
+| `KP_CLIENT_SECRET`  | KinoPub API client secret (write to support@kino.pub) | **required** |
+| `KP_PROTOCOL`      | Streaming protocol (`hls`, `hls2`, `hls4`, `http`)    | `hls4`   |
 
 ## Project structure
 
 ```
 api.py              # FastAPI app, middleware, router includes
-config.py           # Settings (pydantic-settings, loaded from .env)
+config/
+    settings.py     # Pydantic settings (ServerSettings, KPSettings), loaded from .env
+    globals.py      # Constants: API URLs, timeouts, UI IDs, player URLs
 icons/              # Custom SVG icons
 routers/
     static.py       # Static files and start.json
@@ -124,5 +126,6 @@ util/
     msx.py          # MSX JSON response builders
     proxy.py        # Domain-allowlist proxy
     db.py           # SQLite storage
+    sqlite_migrations.py # Schema migrations
 pages/              # Static HTML/JS (subtitle timing tool at /subtitleShifter)
 ```

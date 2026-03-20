@@ -1,26 +1,58 @@
 import re
-from re import RegexFlag
 from urllib.parse import urlencode, urlparse
 
 import aiohttp
 
-import config
+from config.settings import server
 from util import db
+
+HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36'
+}
+
+KNOWN_DOMAINS: set[str] = set()
+
+SESSION: aiohttp.ClientSession | None = None
+
+
+async def get_session() -> aiohttp.ClientSession:
+    global SESSION
+    if SESSION is None or SESSION.closed:
+        SESSION = aiohttp.ClientSession(
+            headers=HEADERS,
+            timeout=aiohttp.ClientTimeout(total=5)
+        )
+    return SESSION
+
+
+async def close_session() -> None:
+    global SESSION
+    if SESSION is not None and not SESSION.closed:
+        await SESSION.close()
+    SESSION = None
 
 
 def make_proxy_url(url):
     domain = urlparse(url).netloc
     remember_domain(domain)
-    return f'{config.MSX_HOST}/msx/proxy?' + urlencode({'url': url})
+    return f'{server.host}/msx/proxy?' + urlencode({'url': url})
 
 
 def domain_exists(domain):
-    return db.get_domain(domain) is not None
+    if domain in KNOWN_DOMAINS:
+        return True
+
+    if db.get_domain(domain) is not None:
+        KNOWN_DOMAINS.add(domain)
+        return True
+
+    return False
 
 
 def remember_domain(domain):
     if not domain_exists(domain):
         db.add_domain(domain)
+    KNOWN_DOMAINS.add(domain)
 
 
 def check_url(url):
@@ -30,34 +62,38 @@ def check_url(url):
     return True
 
 
-HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36'
-}
-
-
 def rewrite_domain(url: str, content: str) -> str:
     domain_info = urlparse(url)
-    prefix = domain_info.scheme + '://' + domain_info.netloc
+    prefix = f'{domain_info.scheme}://{domain_info.netloc}'
 
-    def _d(x: re.Match):
+    def replace_match(x: re.Match):
         a, b, c = x.groups()
-        r = f'{config.MSX_HOST}/msx/proxy?' + urlencode({'url': prefix + '/' + b})
+        r = f'{server.host}/msx/proxy?' + urlencode({'url': f'{prefix}/{b}'})
         return a + r + c
 
     content = re.sub(
-        '(^|URI=")/(.*?)($|")', lambda x: _d(x), content, flags=RegexFlag.MULTILINE
+        '(^|URI=")/(.*?)($|")',
+        replace_match,
+        content,
+        flags=re.MULTILINE
     )
+
     return content
 
 
 async def get(url):
-    async with aiohttp.ClientSession(
-        headers=HEADERS, timeout=aiohttp.ClientTimeout(total=5)
-    ) as s:
-        response = await s.get(url)
+    session = await get_session()
+    async with session.get(url) as response:
         content = await response.read()
-        if isinstance(content, bytes):
+        content_type = response.headers.get('content-type')
+
+        is_text_playlist = ((
+            content_type is not None and 'mpegurl' in content_type.lower()
+        ) or url.lower().endswith('.m3u8'))
+
+        if is_text_playlist:
             text_content = content.decode('utf-8')
             text_content = rewrite_domain(url, text_content)
             content = text_content.encode('utf-8')
-        return response.status, response.headers.get('content-type'), content
+
+        return response.status, content_type, content

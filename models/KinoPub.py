@@ -1,6 +1,13 @@
+from __future__ import annotations
+
+import asyncio
+import logging
+from typing import TYPE_CHECKING
+
 import aiohttp
 
-import config
+import config.globals as g
+from config.settings import kp
 from models.Category import Category
 from models.Channel import Channel
 from models.Collection import Collection
@@ -10,51 +17,95 @@ from models.Genre import Genre
 from models.Media import Media
 from models.Reference import Reference
 from util import db
-from util.msx import LENNY
+
+if TYPE_CHECKING:
+    from models.Device import Device
+
+logger = logging.getLogger(__name__)
 
 
 class KinoPub:
+
     def __init__(self, token, refresh):
         self.token = token
         self.refresh = refresh
+        self.session: aiohttp.ClientSession | None = None
 
-    async def api(self, path, params=None, method='GET'):
-        headers = {'Authorization': f'Bearer {self.token}'}
-        async with aiohttp.ClientSession(
-            headers=headers, timeout=aiohttp.ClientTimeout(total=5),
-        ) as s:
-            if method == 'GET':
-                response = await s.get(
-                    f'https://api.service-kp.com/v1{path}', params=params,
-                )
-            else:
-                response = await s.request(
-                    method, f'https://api.service-kp.com/v1{path}', json=params,
-                )
+    async def get_session(self) -> aiohttp.ClientSession:
+        if self.session is None or self.session.closed:
+            self.session = aiohttp.ClientSession(
+                headers={'Authorization': f'Bearer {self.token}'},
+                timeout=g.TIMEOUT
+            )
+        return self.session
 
-            if response.status == 401:
-                reauth_result = await self.refresh_tokens()
-                if reauth_result:
-                    return await self.api(path, params=params)
-                else:
-                    return None
-            result = await response.json()
-            return result
+    async def close_session(self) -> None:
+        if self.session is not None and not self.session.closed:
+            await self.session.close()
+        self.session = None
+
+    async def api(
+        self,
+        path,
+        params=None,
+        method='GET',
+        retried=False
+    ):
+        session = await self.get_session()
+        url = f'{g.BASE_URL}{path}'
+        if method == 'GET':
+            response = await session.get(url, params=params)
+        else:
+            response = await session.request(
+                method,
+                url,
+                json=params
+            )
+
+        if response.status == 401 and not retried:
+            reauth_result = await self.refresh_tokens()
+            if reauth_result:
+                return await self.api(
+                    path,
+                    params=params,
+                    method=method,
+                    retried=True
+                )
+            return None
+        result = await response.json()
+        return result
+
+    async def fetch_list(
+        self,
+        path,
+        model,
+        key='items',
+        params=None,
+        default=None
+    ):
+        result = await self.api(path, params=params)
+        if result is None:
+            return default
+        return [model(i) for i in result[key]]
 
     async def get_content_categories(self):
-        result = await self.api('/types')
-        if result is None:
-            return None
-        return [Category(i) for i in result['items']]
+        return await self.fetch_list('/types', Category, default=[])
 
     async def get_genres(self, category=None):
-        result = await self.api('/genres', params={'type': category})
-        if result is None:
-            return None
-        return [Genre(i) for i in result['items']]
+        return await self.fetch_list(
+            '/genres',
+            Genre,
+            params={'type': category},
+            default=[]
+        )
 
     async def get_content(
-        self, category=None, page=1, extra=None, genre=None, sort=None,
+        self,
+        category=None,
+        page=1,
+        extra=None,
+        genre=None,
+        sort=None
     ):
         path = f'/items/{extra}' if extra else '/items'
         params = {'page': page}
@@ -64,16 +115,20 @@ class KinoPub:
             params['genre'] = genre
         if sort:
             params['sort'] = sort
-        result = await self.api(path, params=params)
-        if result is None:
-            return []
-        return [Content(i) for i in result['items']]
+        return await self.fetch_list(
+            path,
+            Content,
+            params=params,
+            default=[]
+        )
 
     async def search(self, query):
-        result = await self.api('/items/search', params={'q': query})
-        if result is None:
-            return []
-        return [Content(i) for i in result['items']]
+        return await self.fetch_list(
+            '/items/search',
+            Content,
+            params={'q': query},
+            default=[]
+        )
 
     async def get_single_content(self, id):
         result = await self.api(f'/items/{id}')
@@ -82,70 +137,91 @@ class KinoPub:
         return Content(result['item'])
 
     async def get_bookmark_folders(self):
-        result = await self.api('/bookmarks')
-        if result is None:
-            return None
-        return [Folder(i) for i in result['items']]
+        return await self.fetch_list('/bookmarks', Folder, default=[])
 
     async def create_bookmark_folder(self, name: str = 'Мои закладки'):
-        await self.api('/bookmarks/create', {'title': name}, method='POST')
+        await self.api(
+            '/bookmarks/create',
+            {'title': name},
+            method='POST'
+        )
 
     async def get_content_folders(self, content_id):
-        result = await self.api('/bookmarks/get-item-folders', {'item': content_id})
-        if result is None:
-            return None
-        return [Folder(i) for i in result['folders']]
+        return await self.fetch_list(
+            '/bookmarks/get-item-folders',
+            Folder,
+            key='folders',
+            params={'item': content_id},
+            default=[]
+        )
 
     async def get_bookmark_folder(self, folder_id, page=1):
         result = await self.api(f'/bookmarks/{folder_id}', {'page': page})
         if result is None:
-            return None
+            return []
         try:
             current_page = result['pagination']['current']
             if page > current_page:
                 return []
-        except Exception:
+        except (KeyError, TypeError):
             pass
         return [Content(i) for i in result['items']]
 
     async def get_history(self, page=1):
         result = await self.api('/history', {'page': page})
         if result is None:
-            return None
+            return []
         return [Content(i['item'], Media(i['media'])) for i in result['history']]
 
     async def get_watching(self, subscribed=0):
-        result = await self.api('/watching/serials', {'subscribed': subscribed})
-        if result is None:
-            return None
-        return [Content(i) for i in result['items']]
+        return await self.fetch_list(
+            '/watching/serials',
+            Content,
+            params={'subscribed': subscribed},
+            default=[]
+        )
 
     async def get_tv(self):
-        result = await self.api('/tv')
-        if result is None:
-            return None
-        return [Channel(i) for i in result['channels']]
+        return await self.fetch_list(
+            '/tv',
+            Channel,
+            key='channels',
+            default=[]
+        )
 
     async def get_collections(self, page):
-        result = await self.api('/collections', params={'page': page})
-        if result is None:
-            return None
-        return [Collection(i) for i in result['items']]
+        return await self.fetch_list(
+            '/collections',
+            Collection,
+            params={'page': page},
+            default=[]
+        )
 
     async def get_single_collection(self, collection_id):
-        result = await self.api('/collections/view', params={'id': collection_id})
-        if result is None:
-            return None
-        return [Content(i) for i in result['items']]
+        return await self.fetch_list(
+            '/collections/view',
+            Content,
+            params={'id': collection_id},
+            default=[]
+        )
 
     async def notify(self, device_id):
         await self.api(
             '/device/notify',
-            {'title': 'KP-MSX', 'hardware': LENNY, 'software': device_id},
-            method='POST',
+            {
+                'title': 'KP-MSX',
+                'hardware': g.LENNY,
+                'software': device_id
+            },
+            method='POST'
         )
 
-    async def toggle_watched(self, content_id, season=None, episode=None):
+    async def toggle_watched(
+        self,
+        content_id,
+        season=None,
+        episode=None
+    ):
         params = {'id': content_id}
         if season is not None:
             params['season'] = season
@@ -159,81 +235,98 @@ class KinoPub:
     async def toggle_bookmark(self, content_id, folder_id):
         await self.api(
             '/bookmarks/toggle-item',
-            {'item': content_id, 'folder': folder_id},
-            method='POST',
+            {
+                'item': content_id,
+                'folder': folder_id
+            },
+            method='POST'
         )
 
-    async def get_current_device_info(self):
-        data = await self.api('/device/info')
+    async def get_current_device_info(self) -> Device:
         from models.Device import Device
 
+        data = await self.api('/device/info')
         return Device(data.get('device', {}))
 
-    FOURK_SETTING = 'support4k'
-    HEVC_SETTING = 'supportHevc'
-    HDR_SETTING = 'supportHdr'
-    MIXED_PLAYLIST_SETTING = 'mixedPlaylist'
-    SERVER_LOCATION_SETTING = 'serverLocation'
-
     async def update_device_setting(
-        self, device_id: int, name: str, value: 'bool | int'
+        self,
+        device_id: int,
+        name: str,
+        value: 'bool | int'
     ):
-        await self.api(f'/device/{device_id}/settings', {name: value}, 'POST')
+        await self.api(
+            f'/device/{device_id}/settings',
+            {name: value},
+            'POST'
+        )
 
     @staticmethod
     async def get_codes():
         params = {
             'grant_type': 'device_code',
-            'client_id': config.KP_CLIENT_ID,
-            'client_secret': config.KP_CLIENT_SECRET,
+            'client_id': kp.client_id,
+            'client_secret': kp.client_secret
         }
-        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as s:
-            response = await s.post(
-                'https://api.service-kp.com/oauth2/device', params=params,
-            )
-            result = await response.json()
-            return result['user_code'], result['code']
+        try:
+            async with aiohttp.ClientSession(timeout=g.TIMEOUT) as s:
+                response = await s.post(g.OAUTH_URL, params=params)
+                result = await response.json()
+                return result['user_code'], result['code']
+        except (aiohttp.ClientError, asyncio.TimeoutError, KeyError) as e:
+            logger.warning('Failed to fetch registration codes: %s', e)
+            return None
 
     @staticmethod
     async def check_registration(code):
         params = {
             'grant_type': 'device_token',
-            'client_id': config.KP_CLIENT_ID,
-            'client_secret': config.KP_CLIENT_SECRET,
-            'code': code,
+            'client_id': kp.client_id,
+            'client_secret': kp.client_secret,
+            'code': code
         }
-        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as s:
-            response = await s.post(
-                'https://api.service-kp.com/oauth2/device', params=params,
-            )
-            result = await response.json()
-            if result.get('error') is not None:
-                return None
-            return result
+        try:
+            async with aiohttp.ClientSession(timeout=g.TIMEOUT) as s:
+                response = await s.post(g.OAUTH_URL, params=params)
+                result = await response.json()
+                if result.get('error') is not None:
+                    return None
+                return result
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            logger.warning('Failed to check device registration status: %s', e)
+            return None
 
     async def refresh_tokens(self):
         params = {
             'grant_type': 'refresh_token',
-            'client_id': config.KP_CLIENT_ID,
-            'client_secret': config.KP_CLIENT_SECRET,
-            'refresh_token': self.refresh,
+            'client_id': kp.client_id,
+            'client_secret': kp.client_secret,
+            'refresh_token': self.refresh
         }
-        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as s:
-            response = await s.post(
-                'https://api.service-kp.com/oauth2/device', params=params,
-            )
-            result = await response.json()
-            if result.get('error') is not None:
-                return False
+        try:
+            async with aiohttp.ClientSession(timeout=g.TIMEOUT) as s:
+                response = await s.post(g.OAUTH_URL, params=params)
+                result = await response.json()
+                if result.get('error') is not None:
+                    return False
 
-            db.update_tokens(
-                self.token, result['access_token'], result['refresh_token']
-            )
-            self.token = result['access_token']
-            self.refresh = result['refresh_token']
+                db.update_tokens(
+                    self.token,
+                    result['access_token'],
+                    result['refresh_token']
+                )
+                self.token = result['access_token']
+                self.refresh = result['refresh_token']
 
-            return True
+                await self.close_session()
+
+                return True
+        except (aiohttp.ClientError, asyncio.TimeoutError, KeyError) as e:
+            logger.warning('Failed to refresh access token: %s', e)
+            return False
 
     async def get_available_servers(self):
-        result = await self.api('/references/server-location')
-        return [Reference(i) for i in result.get('items', [])]
+        return await self.fetch_list(
+            '/references/server-location',
+            Reference,
+            default=[]
+        )

@@ -1,10 +1,16 @@
 import json
+import logging
 import sqlite3
 
-import config
+from config.settings import server
 from util import sqlite_migrations
 
-connection = sqlite3.connect(config.SQLITE_URL, autocommit=True)
+logger = logging.getLogger(__name__)
+
+connection = sqlite3.connect(
+    server.sqlite_url,
+    autocommit=True
+)
 
 connection.execute(
     'CREATE TABLE IF NOT EXISTS migrations (id INT PRIMARY KEY, name TEXT)'
@@ -17,10 +23,12 @@ migrations = sqlite_migrations.get_migrations()
 latest_version = len(migrations)
 for i in range(current_version, latest_version):
     connection.executescript(migrations[i])
-    print(f'SQLite DB schema is updated to v{i + 1}')
+    logger.info('SQLite DB schema is updated to v%d', i + 1)
 
 
-def _to_device_dict(row):
+def to_device_dict(
+    row
+):
     if row is None:
         return None
     return {
@@ -29,32 +37,45 @@ def _to_device_dict(row):
         'refresh': row[2],
         'token': row[3],
         'settings': None if row[4] is None else json.loads(row[4]),
-        'user_agent': row[5],
+        'user_agent': row[5]
     }
 
 
-def _query_device(sql, params):
-    cursor = connection.execute(sql, params)
-    return _to_device_dict(cursor.fetchone())
+def query_device(
+    sql,
+    params
+):
+    cursor = connection.execute(
+        sql,
+        params
+    )
 
-
-_DEVICE_COLUMNS = 'id, code, refresh, token, settings, user_agent'
-
-
-def get_device_by_id(device_id):
-    return _query_device(
-        f'SELECT {_DEVICE_COLUMNS} FROM devices WHERE id = ?1',
-        [device_id],
+    return to_device_dict(
+        cursor.fetchone()
     )
 
 
-def create_device(entry):
+DEVICE_COLUMNS = 'id, code, refresh, token, settings, user_agent'
+
+
+def get_device_by_id(
+    device_id
+):
+    return query_device(
+        f'SELECT {DEVICE_COLUMNS} FROM devices WHERE id = ?1',
+        [device_id]
+    )
+
+
+def create_device(
+    entry
+):
     settings = entry.get('settings')
-    return _query_device(
+    return query_device(
         f"""
-        INSERT INTO devices ({_DEVICE_COLUMNS})
+        INSERT INTO devices ({DEVICE_COLUMNS})
         VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-        RETURNING {_DEVICE_COLUMNS}
+        RETURNING {DEVICE_COLUMNS}
         """,
         [
             entry.get('id'),
@@ -62,78 +83,104 @@ def create_device(entry):
             entry.get('refresh'),
             entry.get('token'),
             None if settings is None else json.dumps(settings),
-            entry.get('user_agent'),
-        ],
+            entry.get('user_agent')
+        ]
     )
 
 
-def update_device_code(id, code):
-    return _query_device(
-        f'UPDATE devices SET code = ?2 WHERE id = ?1 RETURNING {_DEVICE_COLUMNS}',
-        [id, code],
+def update_device_code(
+    id,
+    code
+):
+    return query_device(
+        f'UPDATE devices SET code = ?2 WHERE id = ?1 RETURNING {DEVICE_COLUMNS}',
+        [id, code]
     )
 
 
-def update_device_tokens(id, token, refresh):
-    return _query_device(
+def update_device_tokens(
+    id,
+    token,
+    refresh
+):
+    return query_device(
         f"""
         UPDATE devices SET token = ?2, refresh = ?3
-        WHERE id = ?1 RETURNING {_DEVICE_COLUMNS}
+        WHERE id = ?1 RETURNING {DEVICE_COLUMNS}
         """,
-        [id, token, refresh],
+        [id, token, refresh]
     )
 
 
-def update_tokens(token, new_token, refresh):
-    return _query_device(
+def update_tokens(
+    token,
+    new_token,
+    refresh
+):
+    return query_device(
         f"""
         UPDATE devices SET token = ?2, refresh = ?3
-        WHERE token = ?1 RETURNING {_DEVICE_COLUMNS}
+        WHERE token = ?1 RETURNING {DEVICE_COLUMNS}
         """,
-        [token, new_token, refresh],
+        [token, new_token, refresh]
     )
 
 
-def delete_device(id):
-    return _query_device(
-        f'DELETE FROM devices WHERE id = ?1 RETURNING {_DEVICE_COLUMNS}',
-        [id],
+def delete_device(
+    id
+):
+    return query_device(
+        f'DELETE FROM devices WHERE id = ?1 RETURNING {DEVICE_COLUMNS}',
+        [id]
     )
 
 
-def update_device_user_agent(id, user_agent):
-    return _query_device(
+def update_device_user_agent(
+    id,
+    user_agent
+):
+    return query_device(
         f"""
         UPDATE devices SET user_agent = ?2
-        WHERE id = ?1 RETURNING {_DEVICE_COLUMNS}
+        WHERE id = ?1 RETURNING {DEVICE_COLUMNS}
         """,
-        [id, user_agent],
+        [id, user_agent]
     )
 
 
-def update_device_settings(id, param):
-    return _query_device(
+def update_device_settings(
+    id,
+    param
+):
+    return query_device(
         f"""
         UPDATE devices SET settings = ?2
-        WHERE id = ?1 RETURNING {_DEVICE_COLUMNS}
+        WHERE id = ?1 RETURNING {DEVICE_COLUMNS}
         """,
-        [id, json.dumps(param)],
+        [id, json.dumps(param)]
     )
 
 
-def get_domain(domain):
+def get_domain(
+    domain
+):
     cursor = connection.execute(
         'SELECT domain FROM domains WHERE domain = ?1',
-        [domain],
+        [domain]
     )
+
     row = cursor.fetchone()
+
     return None if row is None else row[0]
 
 
-def add_domain(domain):
+def add_domain(
+    domain
+):
     cursor = connection.execute(
         'INSERT INTO domains (domain) VALUES (?1) RETURNING domain',
-        [domain],
+        [domain]
     )
     row = cursor.fetchone()
+
     return None if row is None else row[0]

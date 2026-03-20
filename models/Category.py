@@ -1,4 +1,4 @@
-import config
+from config.settings import server
 from util import msx
 
 
@@ -11,7 +11,7 @@ class Category:
         'concert': 'music',
         'documovie': 'document',
         'docuserial': 'document',
-        'tvshow': 'tv',
+        'tvshow': 'tv'
     }
 
     STATIC_CATEGORIES = [
@@ -21,7 +21,7 @@ class Category:
             'icon': 'new',
             'path': '/msx/category',
             'params': {'sort': 'created-', 'page': '{PAGE}'},
-            'interaction': f'{config.MSX_HOST}/paging.html',
+            'interaction': f'{server.host}/paging.html'
         },
         lambda: {
             'id': 'toons',
@@ -29,7 +29,7 @@ class Category:
             'icon': 'child',
             'path': '/msx/category',
             'params': {'genre': '23', 'page': '{PAGE}'},
-            'interaction': f'{config.MSX_HOST}/paging.html',
+            'interaction': f'{server.host}/paging.html'
         },
         lambda: {
             'id': 'collections',
@@ -37,7 +37,7 @@ class Category:
             'icon': 'collections',
             'path': '/msx/collections',
             'params': {'page': '{PAGE}'},
-            'interaction': f'{config.MSX_HOST}/paging.html',
+            'interaction': f'{server.host}/paging.html'
         },
         lambda: {'id': 'sport', 'title': 'Спорт', 'icon': 'sports', 'path': '/msx/tv'},
         lambda: {
@@ -47,13 +47,13 @@ class Category:
             'path': '/msx/search',
             'params': {'q': '{INPUT}'},
             'interaction': 'http://msx.benzac.de/interaction/input.html',
-            'options': 'search:3|ru|Поиск',
+            'options': 'search:3|ru|Поиск'
         },
         lambda: {
             'id': 'bookmarks',
             'title': 'Закладки',
             'icon': 'bookmark',
-            'path': '/msx/bookmarks',
+            'path': '/msx/bookmarks'
         },
         lambda: {
             'id': 'history',
@@ -61,27 +61,27 @@ class Category:
             'icon': 'history',
             'path': '/msx/history',
             'params': {'page': '{PAGE}'},
-            'interaction': f'{config.MSX_HOST}/paging.html',
+            'interaction': f'{server.host}/paging.html'
         },
         lambda: {
             'id': 'watching',
             'title': 'Я смотрю',
             'icon': 'tv',
-            'path': '/msx/watching',
+            'path': '/msx/watching'
         },
         lambda: {
             'id': 'settings',
             'title': 'Настройки',
             'icon': 'settings',
-            'path': '/msx/settings/screen',
-        },
+            'path': '/msx/settings/screen'
+        }
     ]
 
     def __init__(self, data, blacklisted: bool = False):
         self.id = data.get('id')
         self.title = data.get('title')
         self.blacklisted = self.id in Category.BLACKLIST or blacklisted
-        self.ignored = self.id in Category.BLACKLIST
+        self.hidden_from_settings = self.id in Category.BLACKLIST
 
         self.path = data.get('path')
         self.icon = data.get('icon')
@@ -92,9 +92,9 @@ class Category:
         if self.path is None:
             self.path = '/msx/category'
             self.params = {'category': self.id, 'page': '{PAGE}'}
-            self.interaction = f'{config.MSX_HOST}/paging.html'
+            self.interaction = f'{server.host}/paging.html'
         else:
-            self.params = data.get('params', dict())
+            self.params = data.get('params', {})
             self.interaction = data.get('interaction')
             self.options = data.get('options')
 
@@ -108,8 +108,8 @@ class Category:
                 self.path,
                 params=self.params,
                 interaction=self.interaction,
-                options=self.options,
-            ),
+                options=self.options
+            )
         }
 
     def to_msx_settings_button(self):
@@ -118,7 +118,7 @@ class Category:
             'label': self.title,
             'action': msx.format_action(
                 f'/msx/settings/toggle_menu_entry/{self.id}', module='execute'
-            ),
+            )
         }
         entry.update(msx.stamp(not self.blacklisted))
         return entry

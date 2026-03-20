@@ -1,5 +1,8 @@
 class Media:
-    def __init__(self, data):
+    def __init__(
+        self,
+        data
+    ):
         self.title = data.get('title')
         self.n = data.get('number')
         self.season = data.get('snumber')

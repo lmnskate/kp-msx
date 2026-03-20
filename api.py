@@ -1,4 +1,5 @@
-import traceback
+import logging
+from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
@@ -7,18 +8,28 @@ from fastapi.staticfiles import StaticFiles
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-import config
+from config.settings import server
 from models.Device import Device
 from routers import content, proxy, registration, settings, static
 from util import msx
+from util import proxy as proxy_util
 
-app = FastAPI()
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app):
+    yield
+    await proxy_util.close_session()
+
+
+app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=['*'],
     allow_credentials=True,
     allow_methods=['*'],
-    allow_headers=['*'],
+    allow_headers=['*']
 )
 
 app.include_router(static.router)
@@ -29,7 +40,7 @@ app.include_router(proxy.router)
 app.mount(
     '/icons',
     StaticFiles(directory='icons', html=False),
-    name='icons',
+    name='icons'
 )
 
 
@@ -46,11 +57,11 @@ UNAUTHORIZED_PATHS = frozenset([
     '/paging.html',
     '/paging.js',
     '/msx/start.json',
-    '/msx/proxy',
+    '/msx/proxy'
 ])
 
 
-def _cors_json_response(data):
+def cors_json_response(data):
     response = JSONResponse(data)
     response.headers['Access-Control-Allow-Credentials'] = 'true'
     response.headers['Access-Control-Allow-Origin'] = '*'
@@ -66,19 +77,21 @@ async def auth(request: Request, call_next):
     device_id = request.query_params.get('id')
 
     if device_id is None and path not in UNAUTHORIZED_PATHS and not path.startswith('/icons/'):
-        return _cors_json_response({
+        return cors_json_response({
             'response': {
                 'status': 200,
-                'data': {'action': 'warn:ID не может быть пустым'},
-            },
+                'data': {'action': 'warn:ID не может быть пустым'}
+            }
         })
 
     if device_id == '{ID}' and path not in UNAUTHORIZED_PATHS and not path.startswith('/icons/'):
-        return _cors_json_response(msx.unsupported_version())
+        return cors_json_response(msx.unsupported_version())
 
-    request.state.device = Device.by_id(device_id)
-    if request.state.device is None and device_id is not None:
-        request.state.device = Device.create(device_id)
+    request.state.device = None
+    if device_id is not None:
+        request.state.device = Device.by_id(device_id)
+        if request.state.device is None:
+            request.state.device = Device.create(device_id)
 
     device = request.state.device
     if device is not None and device.user_agent is None:
@@ -89,13 +102,16 @@ async def auth(request: Request, call_next):
     try:
         return await call_next(request)
     except Exception:
-        traceback.print_exc()
-        return _cors_json_response(msx.handle_exception())
+        logger.exception('Unhandled error in request')
+        return cors_json_response(msx.handle_exception())
+    finally:
+        if device is not None and device.kp is not None:
+            await device.kp.close_session()
 
 
 if __name__ == '__main__':
     uvicorn.run(
         app=app,
         host='0.0.0.0',
-        port=int(config.PORT),
+        port=int(server.port)
     )

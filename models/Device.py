@@ -1,6 +1,20 @@
+import config.globals as g
 from models.DeviceSettings import DeviceSettings
 from models.KinoPub import KinoPub
 from util import db
+
+KP_TOGGLES = {
+    g.FOURK_ID: ('fourk', g.FOURK_SETTING),
+    g.HDR_ID: ('hdr', g.HDR_SETTING),
+    g.HEVC_ID: ('hevc', g.HEVC_SETTING),
+    g.MIXED_PLAYLIST_ID: ('mixed_playlist', g.MIXED_PLAYLIST_SETTING),
+}
+
+LOCAL_TOGGLES = {
+    g.PROXY_ID: 'proxy',
+    g.ALTERNATIVE_PLAYER_ID: 'alternative_player',
+    g.SMALL_POSTERS_ID: 'small_posters',
+}
 
 
 class Device:
@@ -47,44 +61,29 @@ class Device:
     def delete(self):
         db.delete_device(self.id)
 
-    async def _toggle_kp_setting(self, setting_attr, kp_setting_name):
-        value = not getattr(self.settings, setting_attr)
-        setattr(self.settings, setting_attr, value)
-        device_info = await self.kp.get_current_device_info()
-        await self.kp.update_device_setting(
-            device_info.id, kp_setting_name, value,
-        )
-        self.update_settings()
+    async def toggle(self, setting_id):
+        if setting_id in KP_TOGGLES:
+            attr, kp_setting = KP_TOGGLES[setting_id]
+            value = not getattr(self.settings, attr)
+            setattr(self.settings, attr, value)
+            device_info = await self.kp.get_current_device_info()
+            await self.kp.update_device_setting(
+                device_info.id,
+                kp_setting,
+                value
+            )
+            self.update_settings()
+            return attr
 
-    async def _toggle_local_setting(self, setting_attr):
-        setattr(
-            self.settings, setting_attr,
-            not getattr(self.settings, setting_attr),
-        )
-        self.update_settings()
-
-    async def toggle_4k(self):
-        await self._toggle_kp_setting('fourk', KinoPub.FOURK_SETTING)
-
-    async def toggle_hdr(self):
-        await self._toggle_kp_setting('hdr', KinoPub.HDR_SETTING)
-
-    async def toggle_hevc(self):
-        await self._toggle_kp_setting('hevc', KinoPub.HEVC_SETTING)
-
-    async def toggle_mixed_playlist(self):
-        await self._toggle_kp_setting(
-            'mixed_playlist', KinoPub.MIXED_PLAYLIST_SETTING,
-        )
-
-    async def toggle_proxy(self):
-        await self._toggle_local_setting('proxy')
-
-    async def toggle_alternative_player(self):
-        await self._toggle_local_setting('alternative_player')
-
-    async def toggle_small_posters(self):
-        await self._toggle_local_setting('small_posters')
+        if setting_id in LOCAL_TOGGLES:
+            attr = LOCAL_TOGGLES[setting_id]
+            setattr(
+                self.settings,
+                attr,
+                not getattr(self.settings, attr)
+            )
+            self.update_settings()
+            return attr
 
     async def toggle_server(self) -> str:
         device_info = await self.kp.get_current_device_info()
@@ -97,12 +96,14 @@ class Device:
                 break
 
         await self.kp.update_device_setting(
-            device_info.id, KinoPub.SERVER_LOCATION_SETTING, new_server.id,
+            device_info.id,
+            g.SERVER_LOCATION_SETTING,
+            new_server.id
         )
         self.settings.server = new_server.name
         self.update_settings()
 
-        return f'\u0421\u0435\u0440\u0432\u0435\u0440: {new_server.name}'
+        return f'Сервер: {new_server.name}'
 
     def toggle_menu_entry(self, menu_entry):
         if menu_entry in self.settings.menu_blacklist:
