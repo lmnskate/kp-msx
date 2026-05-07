@@ -38,6 +38,5 @@ TRAILER_BUTTON_ID = 'trailer_button'
 DEFAULT_QUALITY = '1080p'
 
 # Player URLs
-#PLAYER_URL = 'https://slonopot.github.io/msx-hlsx/hlsx.html'
-PLAYER_URL = 'http://192.168.2.90/msx-hlsx/hlsx.html'
+PLAYER_URL = 'https://slonopot.github.io/msx-hlsx/hlsx.html'
 ALTERNATIVE_PLAYER_URL = 'http://msx.benzac.de/plugins/html5x.html'
