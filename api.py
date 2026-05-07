@@ -46,7 +46,15 @@ app.mount(
 
 @app.middleware('http')
 async def cache_icons(request: Request, call_next):
-    response = await call_next(request)
+    try:
+        response = await call_next(request)
+    except ExceptionGroup:
+        logger.exception('Unhandled ExceptionGroup in cache_icons')
+        return cors_json_response(msx.handle_exception())
+    except Exception:
+        logger.exception('Unhandled error in cache_icons')
+        return cors_json_response(msx.handle_exception())
+
     if str(request.url.path).startswith('/icons/'):
         response.headers['Cache-Control'] = 'public, max-age=604800'
     return response
@@ -101,6 +109,9 @@ async def auth(request: Request, call_next):
 
     try:
         return await call_next(request)
+    except ExceptionGroup:
+        logger.exception('Unhandled ExceptionGroup in request')
+        return cors_json_response(msx.handle_exception())
     except Exception:
         logger.exception('Unhandled error in request')
         return cors_json_response(msx.handle_exception())
