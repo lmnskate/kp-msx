@@ -58,7 +58,7 @@ WorkingDirectory=/home/user/kp-msx
 
 EnvironmentFile=/home/user/kp-msx/.env
 
-ExecStart=/home/user/kp-msx/.venv/bin/uvicorn api:app --host 0.0.0.0 --port 1234
+ExecStart=/home/user/kp-msx/.venv/bin/uvicorn api:app --host 0.0.0.0 --port 1234 --proxy-headers --workers 4
 
 Restart=always
 RestartSec=5
