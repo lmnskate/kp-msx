@@ -4,7 +4,7 @@ from models.KinoPub import KinoPub
 from util import db
 
 KP_TOGGLES = {
-    g.FOURK_ID: ('fourk', g.FOURK_SETTING),
+    g.UHD_ID: ('uhd', g.UHD_SETTING),
     g.HDR_ID: ('hdr', g.HDR_SETTING),
     g.HEVC_ID: ('hevc', g.HEVC_SETTING),
     g.MIXED_PLAYLIST_ID: ('mixed_playlist', g.MIXED_PLAYLIST_SETTING),
@@ -13,7 +13,6 @@ KP_TOGGLES = {
 LOCAL_TOGGLES = {
     g.PROXY_ID: 'proxy',
     g.ALTERNATIVE_PLAYER_ID: 'alternative_player',
-    g.SMALL_POSTERS_ID: 'small_posters',
 }
 
 
@@ -115,6 +114,11 @@ class Device:
 
     def reset_menu(self):
         self.settings.menu_blacklist = []
+        self.update_settings()
+
+    def set_poster_settings(self, poster_size, poster_proxy):
+        self.settings.poster_size = poster_size
+        self.settings.poster_proxy = poster_proxy
         self.update_settings()
 
     def update_user_agent(self, user_agent):

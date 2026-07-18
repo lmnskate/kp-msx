@@ -1,6 +1,7 @@
 from config.globals import (BOOKMARK_BUTTON_ID, SUBSCRIPTION_BUTTON_ID,
                             TRAILER_BUTTON_ID, WATCH_BUTTON_ID)
 from models.Folder import Folder
+from models.Poster import Poster
 from models.Season import Season
 from models.Video import Video
 from util import msx
@@ -25,11 +26,9 @@ class Content:
         if self.cast:
             self.plot += f'\n\nВ ролях: {self.cast}'
 
-        posters = data.get('posters') or {}
-        self.poster = posters.get('big')
-        self.small_poster = posters.get('small')
+        self.poster = Poster(data.get('posters') or {})
 
-        self.rating = data.get('imdb_rating') or data.get('kinopoinsk_rating')
+        self.rating = data.get('imdb_rating') or data.get('kinopoisk_rating')
         self.is_4k = data.get('quality') == 2160
 
         bookmarks = data.get('bookmarks')
@@ -49,7 +48,6 @@ class Content:
         self.seasons = None
 
         if (seasons := data.get('seasons')) is not None:
-            self.poster = posters.get('big')
             self.seasons = [Season(i, self.id) for i in seasons]
 
         self.new_episodes = data.get('new')
@@ -59,10 +57,21 @@ class Content:
     def update_bookmarks(self, folders):
         self.bookmarks = [i.id for i in folders]
 
-    def to_msx(self, small_poster: bool = False):
+    def rating_color(self):
+        try:
+            rating = float(self.rating)
+        except (TypeError, ValueError):
+            return 'msx-yellow'
+        if rating >= 7:
+            return 'msx-green'
+        if rating >= 5:
+            return 'msx-yellow'
+        return 'msx-red'
+
+    def to_msx(self, device_settings=None):
         entry = {
             'title': self.title,
-            'image': self.small_poster if small_poster else self.poster,
+            'image': self.poster.get(device_settings),
             'action': msx.format_action(
                 '/msx/content',
                 params={'content_id': self.id},
@@ -77,13 +86,18 @@ class Content:
                 entry['titleFooter'] = str(self.year)
             if self.rating:
                 entry['tag'] = str(self.rating)
-                entry['tagColor'] = 'msx-yellow'
+                entry['tagColor'] = self.rating_color()
             if self.is_4k:
                 entry['badge'] = '4K'
                 entry['badgeColor'] = 'msx-blue'
             if self.new_episodes is not None:
                 entry['stamp'] = f'+{self.new_episodes}'
                 entry['stampColor'] = 'msx-yellow'
+
+        if self.media is not None:
+            progress = self.media.progress()
+            if progress is not None:
+                entry['progress'] = progress
 
         return entry
 
@@ -172,7 +186,7 @@ class Content:
         self,
         proxy: bool = False,
         alternative_player: bool = False,
-        small_poster: bool = False
+        device_settings=None
     ):
         buttons = [self.to_bookmark_button()]
 
@@ -217,14 +231,14 @@ class Content:
             'id': 'teaser',
             'type': 'teaser',
             'layout': '0,0,4,6',
-            'image': self.small_poster if small_poster else self.poster,
+            'image': self.poster.get(device_settings),
             'imageFiller': 'height-left',
             'imageOverlay': 2,
             'action': 'focus:plot'
         }
         if self.rating:
             teaser['badge'] = str(self.rating)
-            teaser['badgeColor'] = 'msx-yellow'
+            teaser['badgeColor'] = self.rating_color()
         if self.year:
             teaser['tag'] = str(self.year)
             teaser['tagColor'] = 'msx-glass'
@@ -246,6 +260,7 @@ class Content:
         return {
             'type': 'pages',
             'headline': self.title,
+            'background': self.poster.get_wide(device_settings),
             'pages': [
                 {
                     'items': page_items
@@ -268,16 +283,16 @@ class Content:
         return {
             'type': 'list',
             'headline': self.title,
+            'background': self.poster.wide,
             'template': {
                 'enumerate': False,
                 'type': 'button',
-                'layout': '0,0,2,1',
-                'stampColor': 'msx-glass'
+                'layout': '0,0,8,1',
+                'color': 'msx-glass'
             },
             'items': [
                 {
                     'label': f'Cезон {season.n}',
-                    'stamp': '{ico:check}' if season.watched else None,
                     'focus': not season.watched,
                     'action': msx.format_action(
                         '/msx/episodes',
@@ -297,6 +312,7 @@ class Content:
         return {
             'type': 'list',
             'headline': self.title,
+            'background': self.poster.wide,
             'template': {
                 'enumerate': False,
                 'type': 'button',
@@ -323,10 +339,13 @@ class Content:
         return {
             'type': 'list',
             'headline': f'{self.title} [S{season.n}]',
+            'background': self.poster.wide,
             'template': {
-                'type': 'button',
-                'layout': '0,0,8,1',
-                'stampColor': 'msx-glass'
+                'type': 'separate',
+                'layout': '0,0,4,3',
+                'color': 'msx-glass',
+                'imageFiller': 'height-center',
+                'title': 'Title'
             },
             'items': season.to_episode_pages(
                 proxy=proxy,

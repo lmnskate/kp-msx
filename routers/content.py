@@ -51,6 +51,7 @@ async def category(
     cat = request.query_params.get('category')
     extra = request.query_params.get('extra')
     genre = request.query_params.get('genre')
+    country = request.query_params.get('country')
     sort = request.query_params.get('sort')
 
     result = await device.kp.get_content(
@@ -58,14 +59,15 @@ async def category(
         page=page,
         extra=extra,
         genre=genre,
+        country=country,
         sort=sort
     )
     return msx.content_list(
         result,
         category=cat,
         page=page,
-        show_header=(extra is None and genre is None),
-        small_posters=device.settings.small_posters
+        show_header=(extra is None and genre is None and country is None),
+        device_settings=device.settings
     )
 
 
@@ -114,7 +116,7 @@ async def folder(
     return msx.content_list(
         result,
         page=page,
-        small_posters=device.settings.small_posters
+        device_settings=device.settings
     )
 
 
@@ -131,7 +133,7 @@ async def content_detail(
     return result.to_msx_panel(
         proxy=device.settings.proxy,
         alternative_player=device.settings.alternative_player,
-        small_poster=device.settings.small_posters
+        device_settings=device.settings
     )
 
 
@@ -212,7 +214,7 @@ async def search(
     return msx.content_list(
         result,
         decompress=False,
-        small_posters=device.settings.small_posters
+        device_settings=device.settings
     )
 
 
@@ -226,7 +228,7 @@ async def history(
     return msx.content_list(
         result,
         page=page,
-        small_posters=device.settings.small_posters
+        device_settings=device.settings
     )
 
 
@@ -238,7 +240,7 @@ async def watching(
     result = await device.kp.get_watching(subscribed=1)
     return msx.content_list(
         result,
-        small_posters=device.settings.small_posters
+        device_settings=device.settings
     )
 
 
@@ -251,7 +253,7 @@ async def collections(
     result = await device.kp.get_collections(page=page)
     return msx.collections(
         result,
-        small_posters=device.settings.small_posters
+        device_settings=device.settings
     )
 
 
@@ -264,8 +266,55 @@ async def single_collection(
     result = await device.kp.get_single_collection(collection_id)
     return msx.content_list(
         result,
-        small_posters=device.settings.small_posters
+        device_settings=device.settings
     )
+
+
+@router.get('/similar')
+async def similar(
+    request: Request
+):
+    device = request.state.device
+    result = await device.kp.get_similar(
+        request.query_params.get('content_id')
+    )
+    return msx.content_list(result, device_settings=device.settings)
+
+
+@router.get('/unfinished')
+async def unfinished(
+    request: Request
+):
+    device = request.state.device
+    movies = await device.kp.get_watching_movies()
+    serials = await device.kp.get_watching(subscribed=0)
+    return msx.content_list(
+        movies + serials,
+        device_settings=device.settings
+    )
+
+
+@router.get('/countries')
+async def countries(
+    request: Request
+):
+    device = request.state.device
+    result = await device.kp.get_countries()
+    return msx.country_list(
+        request.query_params.get('category'),
+        result
+    )
+
+
+@router.post('/clear_history')
+async def clear_history(
+    request: Request
+):
+    device = request.state.device
+    await device.kp.clear_history_item(
+        request.query_params.get('content_id')
+    )
+    return msx.empty_response()
 
 
 @router.post('/play')

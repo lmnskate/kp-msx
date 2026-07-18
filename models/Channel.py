@@ -15,6 +15,8 @@ class Channel:
             'title': self.title,
             'playerLabel': self.title,
             'image': self.logo,
+            'badge': 'LIVE',
+            'badgeColor': 'msx-red',
             'action': msx.play_action(
                 self.stream, alternative_player=alternative_player
             )

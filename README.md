@@ -19,14 +19,8 @@ python -m venv .venv
 
 # Configure
 cp .env.example .env
-# Edit .env — at minimum, set SERVER_HOST to http://<your-ip>:1234
-```
 
-> On Windows, use `.venv\Scripts\pip` and `.venv\Scripts\uvicorn` instead of `.venv/bin/`.
-
-## Running
-
-```bash
+# Running
 .venv/bin/uvicorn --host 0.0.0.0 --port 1234 api:app
 ```
 
@@ -95,9 +89,10 @@ Variables are loaded from `.env`. See `.env.example` for a template.
 
 | Variable             | Description                                        | Default           |
 |----------------------|----------------------------------------------------|-------------------|
-| `SERVER_HOST`        | Public URL of your server (used to generate links) | **required**      |
-| `SERVER_PORT`        | Port when running via `python api.py`              | `1234`            |
-| `SERVER_SQLITE_URL`  | SQLite database path                               | `./kp-sqlite.db`  |
+| `SERVER_HOST`        | Hostname or IP of your server (used to generate links) | **required**      |
+| `SERVER_PORT`        | Public port used to generate links                  | `1234`            |
+| `SERVER_SCHEME`      | Scheme for public links (`http` or `https`)         | `http`            |
+| `SERVER_SQLITE_URL`  | SQLite database path                                | `./kp-sqlite.db`  |
 
 ### KinoPub API (`KP_` prefix)
 
@@ -106,6 +101,7 @@ Variables are loaded from `.env`. See `.env.example` for a template.
 | `KP_CLIENT_ID`     | KinoPub API client ID (write to support@kino.pub)     | **required** |
 | `KP_CLIENT_SECRET`  | KinoPub API client secret (write to support@kino.pub) | **required** |
 | `KP_PROTOCOL`      | Streaming protocol (`hls`, `hls2`, `hls4`, `http`)    | `hls4`   |
+| `KP_QUALITY`       | Preferred video quality (`2160p`, `1080p`, `720p`, `480p`); falls back to best available | `1080p` |
 
 ## Project structure
 

@@ -1,5 +1,9 @@
+import re
+from xml.sax.saxutils import escape
+
 from fastapi import APIRouter
 from starlette.requests import Request
+from starlette.responses import Response
 
 from models.KinoPub import KinoPub
 from util import msx
@@ -7,6 +11,22 @@ from util import msx
 router = APIRouter(
     prefix='/msx'
 )
+
+CODE_PATTERN = re.compile(r'^[0-9A-Za-z-]{1,16}$')
+
+CODE_IMAGE_TEMPLATE = '''<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 480">
+    <text x="600" y="270" text-anchor="middle" font-family="Roboto, Arial, sans-serif" font-size="240" font-weight="bold" fill="#ffffff" textLength="1000" lengthAdjust="spacingAndGlyphs">{code}</text>
+    <text x="600" y="410" text-anchor="middle" font-family="Roboto, Arial, sans-serif" font-size="46" fill="#b3b3b3">Используйте этот код для активации устройства</text>
+</svg>'''
+
+
+@router.get('/registration/code_image')
+async def registration_code_image(code: str):
+    if not CODE_PATTERN.match(code):
+        return Response(status_code=400)
+    svg = CODE_IMAGE_TEMPLATE.format(code=escape(code))
+    return Response(svg, media_type='image/svg+xml')
 
 
 @router.get('/registration')

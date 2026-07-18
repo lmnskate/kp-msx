@@ -2,9 +2,11 @@ import logging
 from contextlib import asynccontextmanager
 
 import uvicorn
+from brotli_asgi import BrotliMiddleware
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.gzip import GZipMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -31,6 +33,8 @@ app.add_middleware(
     allow_methods=['*'],
     allow_headers=['*']
 )
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+app.add_middleware(BrotliMiddleware, minimum_size=1000)
 
 app.include_router(static.router)
 app.include_router(registration.router)
@@ -65,7 +69,8 @@ UNAUTHORIZED_PATHS = frozenset([
     '/paging.html',
     '/paging.js',
     '/msx/start.json',
-    '/msx/proxy'
+    '/msx/proxy',
+    '/msx/registration/code_image'
 ])
 
 

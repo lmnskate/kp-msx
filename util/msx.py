@@ -21,7 +21,7 @@ DEFAULT_PLAY_BUTTON_PROPS = {
 
 
 def icon(name):
-    return f'{server.host}/icons/{name}.svg'
+    return f'{server.base_url}/icons/{name}.svg'
 
 
 def format_action(
@@ -34,7 +34,7 @@ def format_action(
     params = {**(params or {}), 'id': '{ID}'}
 
     if path.startswith('/'):
-        data = f'{server.host}{path}'
+        data = f'{server.base_url}{path}'
     else:
         data = path
 
@@ -42,7 +42,7 @@ def format_action(
 
     if interaction:
         if interaction.startswith('/'):
-            interaction = f'{server.host}{interaction}'
+            interaction = f'{server.base_url}{interaction}'
 
         data = f'request:interaction:{data}'
         if options:
@@ -58,7 +58,7 @@ def format_action(
 def start():
     return {
         'name': 'Kinopub',
-        'version': '6.6.6',
+        'version': '2.0.0',
         'parameter': format_action('/msx/menu', module='menu'),
         'welcome': 'none',
         'launcher': {
@@ -147,16 +147,27 @@ def already_registered():
                 'items': [
                     {
                         'type': 'space',
-                        'layout': '0,0,8,3',
+                        'layout': '0,0,12,5',
                         'color': 'msx-glass',
                         'alignment': 'center',
                         'headline': 'Уже зарегистрирован',
-                        'text': 'Это устройство уже привязано к аккаунту Kinopub.'
+                        'text': 'Это устройство уже привязано к аккаунту Kinopub'
+                    },
+                    {
+                        'type': 'button',
+                        'layout': '0,5,12,1',
+                        'enumerate': False,
+                        'label': 'Перезапустить приложение',
+                        'action': 'reload'
                     }
                 ]
             }
         ]
     }
+
+
+def code_image(user_code):
+    return f'{server.base_url}/msx/registration/code_image?{urlencode({"code": user_code})}'
 
 
 def registration(user_code):
@@ -168,17 +179,17 @@ def registration(user_code):
                 'items': [
                     {
                         'type': 'space',
-                        'layout': '0,0,8,3',
+                        'layout': '0,0,12,5',
                         'color': 'msx-glass',
-                        'alignment': 'center',
-                        'headline': user_code,
-                        'text': 'Используйте этот код для добавления устройства на Kinopub или зеркале.',
-                        'titleFooter': 'После ввода кода нажмите кнопку ниже.'
+                        'image': code_image(user_code),
+                        'imageFiller': 'fit',
+                        'imageOverlay': 0
                     },
                     {
                         'type': 'button',
-                        'layout': '2,3,4,1',
-                        'label': 'Я ввёл код',
+                        'layout': '0,5,12,1',
+                        'enumerate': False,
+                        'label': 'Проверить код',
                         'action': format_action(
                             '/msx/check_registration', module='execute'
                         )
@@ -227,7 +238,7 @@ def content_list(
     page=1,
     show_header=False,
     decompress=None,
-    small_posters=False
+    device_settings=None
 ):
     extra = {**POSTER_TEMPLATE, 'imageOverlay': 2}
     if decompress is not None:
@@ -235,7 +246,7 @@ def content_list(
 
     resp = build_list(
         '0,0,2,4',
-        [entry.to_msx(small_poster=small_posters) for entry in entries],
+        [entry.to_msx(device_settings=device_settings) for entry in entries],
         template_extra=extra,
         preload='next'
     )
@@ -252,10 +263,10 @@ def content_list(
     return resp
 
 
-def collections(entries, *, small_posters=False):
+def collections(entries, *, device_settings=None):
     return build_list(
         '0,0,3,6',
-        [entry.to_msx(small_poster=small_posters) for entry in entries],
+        [entry.to_msx(device_settings=device_settings) for entry in entries],
         template_extra={**POSTER_TEMPLATE, 'imageOverlay': 3},
         preload='next'
     )
@@ -274,6 +285,14 @@ def genre_folders(category, result):
         '0,0,4,1',
         [i.to_msx(category) for i in result],
         headline='Жанры'
+    )
+
+
+def country_list(category, result):
+    return build_list(
+        '0,0,4,1',
+        [i.to_msx(category) for i in result],
+        headline='Страны'
     )
 
 
@@ -333,7 +352,7 @@ def handle_exception(error_page=False):
         'color': 'msx-glass',
         'alignment': 'center',
         'headline': 'Произошла ошибка загрузки',
-        'text': 'Скорее всего, кинопаб сейчас недоступен. Проверьте статус на kinopub.online и ожидайте ремонта.'
+        'text': 'Скорее всего, кинопаб сейчас недоступен - проверьте статус на kino.pub и ожидайте ремонта'
     }
     restart_app_btn = {
         'type': 'button',
@@ -422,13 +441,57 @@ def player_action_btn():
 
 
 def settings_screen(screen: bool = False):
-    entry = {
+    if screen:
+        return {
+            'type': 'pages',
+            'headline': 'Настройки',
+            'caption': '/{ico:msx-blue:stop}Настройки',
+            'pages': [
+                {
+                    'items': [
+                        {
+                            'type': 'button',
+                            'layout': '0,0,6,4',
+                            'enumerate': False,
+                            'label': 'Настройки Kinopub',
+                            'action': format_action('/msx/settings', module='panel'),
+                            'image': icon('logo'),
+                            'imageWidth': 'medium',
+                            'alignment': 'center',
+                            'restore': False
+                        },
+                        {
+                            'type': 'button',
+                            'layout': '6,0,6,4',
+                            'enumerate': False,
+                            'label': 'Настройки Media Station X',
+                            'action': 'settings',
+                            'image': icon('settings'),
+                            'imageWidth': 'medium',
+                            'alignment': 'center'
+                        },
+                        {
+                            'type': 'button',
+                            'layout': '0,4,12,2',
+                            'enumerate': False,
+                            'label': 'Перезапустить приложение',
+                            'action': 'reload',
+                            'image': icon('refresh'),
+                            'imageWidth': 'medium',
+                            'alignment': 'center'
+                        }
+                    ]
+                }
+            ]
+        }
+
+    return {
         'headline': 'Настройки',
         'caption': '/{ico:msx-blue:stop}Настройки',
         'template': {
             'enumerate': False,
             'type': 'control',
-            'layout': '0,0,6,1' if screen else '0,0,8,1'
+            'layout': '0,0,8,1'
         },
         'items': [
             {
@@ -453,39 +516,34 @@ def settings_screen(screen: bool = False):
         ]
     }
 
-    if screen:
-        entry['items'].append(
-            {
-                'position': 'context:context1',
-                'type': 'space',
-                'id': 'info',
-                'offset': '-6,1,6,1',
-                'headline': 'Настройки можно также открыть из главного меню (слева) нажатием синей цветной [{ico:msx-blue:stop}] кнопки или кнопки "меню" [{ico:menu}] на пульте. Подсказка находится справа снизу экрана.\nЭтот (и любой другой) пункт меню можно скрыть в разделе "Настройки Kinopub".',
-                'action': '[]'
-            }
-        )
 
-    return entry
+def settings_menu(device_settings, user=None):
+    items = []
+    if user:
+        info = user.get('user') or {}
+        profile = info.get('profile') or {}
+        entry = {
+            'label': profile.get('name') or info.get('username'),
+            'action': '[]',
+            'imageWidth': 'small'
+        }
+        if profile.get('avatar'):
+            entry['image'] = profile['avatar']
+        days = (info.get('subscription') or {}).get('days')
+        if days is not None:
+            entry['extensionLabel'] = f'Подписка истекает через {int(days)} дн.'
+        items.append(entry)
 
+    items.extend([
+        *device_settings.to_toggle_buttons(),
+        device_settings.to_menu_msx_button()
+    ])
 
-def settings_menu(device_settings):
     return {
+        'type': 'list',
         'headline': 'Настройки Kinopub',
-        'template': {'enumerate': False, 'type': 'control', 'layout': '0,0,4,1'},
-        'items': [
-            *device_settings.to_toggle_buttons(),
-            device_settings.to_server_msx_button(),
-            device_settings.to_menu_msx_button(),
-            device_settings.to_help_msx_button(),
-            {
-                'position': 'context:context1',
-                'type': 'space',
-                'id': 'info',
-                'offset': '0,0,4,1',
-                'headline': '',
-                'action': '[]'
-            }
-        ]
+        'template': {'enumerate': False, 'type': 'control', 'layout': '0,0,8,1'},
+        'items': items
     }
 
 
@@ -496,16 +554,21 @@ def stamp(cond):
     }
 
 
+def switch(cond):
+    return {
+        'extensionLabel': 'Включено' if cond else 'Выключено'
+    }
+
+
 def label(text):
     return {'label': text}
 
 
-def settings_button(id, label, action, hint):
+def settings_button(id, label, action):
     return {
         'id': id,
         'label': label,
-        'action': action,
-        'selection': {'action': 'update:panel:info', 'data': {'headline': hint}}
+        'action': action
     }
 
 
@@ -522,6 +585,38 @@ def menu_entries_settings_panel(categories: list):
         'items': [
             i.to_msx_settings_button() for i in categories if not i.hidden_from_settings
         ]
+    }
+
+
+def poster_settings_panel(posters):
+    from models.Poster import Poster
+
+    items = []
+    i = 0
+    for size in Poster.SIZES:
+        for poster_proxy in Poster.PROXIES:
+            items.append({
+                'title': f'{size} / {poster_proxy["title"]}',
+                'image': posters[i].format(size, poster_proxy['id']),
+                'action': format_action(
+                    f'/msx/settings/poster/set/{size}/{poster_proxy["id"]}',
+                    module='execute'
+                )
+            })
+            i += 1
+
+    return {
+        'type': 'list',
+        'headline': 'Выберите первый рабочий постер',
+        'template': {
+            'enumerate': False,
+            'type': 'separate',
+            'layout': '0,0,2,4',
+            'color': 'msx-glass',
+            'imageFiller': 'height-center',
+            'title': 'Title'
+        },
+        'items': items
     }
 
 

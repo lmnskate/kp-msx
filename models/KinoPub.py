@@ -12,6 +12,7 @@ from models.Category import Category
 from models.Channel import Channel
 from models.Collection import Collection
 from models.Content import Content
+from models.Country import Country
 from models.Folder import Folder
 from models.Genre import Genre
 from models.Media import Media
@@ -186,6 +187,7 @@ class KinoPub:
         page=1,
         extra=None,
         genre=None,
+        country=None,
         sort=None
     ):
         path = f'/items/{extra}' if extra else '/items'
@@ -194,6 +196,8 @@ class KinoPub:
             params['type'] = category
         if genre:
             params['genre'] = genre
+        if country:
+            params['country'] = country
         if sort:
             params['sort'] = sort
         return await self.fetch_list(
@@ -252,7 +256,7 @@ class KinoPub:
         result = await self.api('/history', {'page': page})
         if result is None:
             return []
-        return [Content(i['item'], Media(i['media'])) for i in result['history']]
+        return [Content(i['item'], Media(i['media'], time=i.get('time'))) for i in result['history']]
 
     async def get_watching(self, subscribed=0):
         return await self.fetch_list(
@@ -260,6 +264,37 @@ class KinoPub:
             Content,
             params={'subscribed': subscribed},
             default=[]
+        )
+
+    async def get_watching_movies(self):
+        return await self.fetch_list(
+            '/watching/movies',
+            Content,
+            default=[]
+        )
+
+    async def get_countries(self):
+        return await self.fetch_list(
+            '/countries',
+            Country,
+            default=[]
+        )
+
+    async def get_similar(self, content_id):
+        return await self.fetch_list(
+            '/items/similar',
+            Content,
+            params={'id': content_id},
+            default=[]
+        )
+
+    async def get_user(self):
+        return await self.api('/user')
+
+    async def clear_history_item(self, content_id):
+        await self.api(
+            f'/history/clear-for-item?id={content_id}',
+            method='POST'
         )
 
     async def get_tv(self):

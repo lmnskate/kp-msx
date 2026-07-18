@@ -20,10 +20,12 @@ class Episode(Playable):
         self.watched = data.get('watched') == 1
 
     def menu_title(self):
-        return f'{self.n}. {self.title}'
+        title = self.title or 'Серия'
+        return f'{self.n}. {title}'
 
     def player_title(self):
-        return f'[S{self.season}/E{self.n}] {self.title}'
+        title = self.title or 'Серия'
+        return f'[S{self.season}/E{self.n}] {title}'
 
     def trigger_ready(self):
         params = {

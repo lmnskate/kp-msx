@@ -2,3 +2,4 @@ uvicorn
 fastapi
 aiohttp
 pydantic-settings
+brotli-asgi

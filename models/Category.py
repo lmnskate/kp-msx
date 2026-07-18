@@ -3,14 +3,14 @@ from util import msx
 
 
 class Category:
-    BLACKLIST = ['4k']
+    BLACKLIST = ['4k', '3d']
 
     ICON_MAP = {
         'movie': 'movie',
         'serial': 'tv',
         'concert': 'music',
-        'documovie': 'document',
-        'docuserial': 'document',
+        'documovie': 'documentary',
+        'docuserial': 'documentary',
         'tvshow': 'tv'
     }
 
@@ -21,15 +21,15 @@ class Category:
             'icon': 'new',
             'path': '/msx/category',
             'params': {'sort': 'created-', 'page': '{PAGE}'},
-            'interaction': f'{server.host}/paging.html'
+            'interaction': f'{server.base_url}/paging.html'
         },
         lambda: {
             'id': 'toons',
             'title': 'Мультфильмы',
-            'icon': 'child',
+            'icon': 'cartoon',
             'path': '/msx/category',
             'params': {'genre': '23', 'page': '{PAGE}'},
-            'interaction': f'{server.host}/paging.html'
+            'interaction': f'{server.base_url}/paging.html'
         },
         lambda: {
             'id': 'collections',
@@ -37,9 +37,14 @@ class Category:
             'icon': 'collections',
             'path': '/msx/collections',
             'params': {'page': '{PAGE}'},
-            'interaction': f'{server.host}/paging.html'
+            'interaction': f'{server.base_url}/paging.html'
         },
-        lambda: {'id': 'sport', 'title': 'Спорт', 'icon': 'sports', 'path': '/msx/tv'},
+        lambda: {
+            'id': 'sport',
+            'title': 'Спорт',
+            'icon': 'sports',
+            'path': '/msx/tv'
+        },
         lambda: {
             'id': 'search',
             'title': 'Поиск',
@@ -61,13 +66,7 @@ class Category:
             'icon': 'history',
             'path': '/msx/history',
             'params': {'page': '{PAGE}'},
-            'interaction': f'{server.host}/paging.html'
-        },
-        lambda: {
-            'id': 'watching',
-            'title': 'Я смотрю',
-            'icon': 'tv',
-            'path': '/msx/watching'
+            'interaction': f'{server.base_url}/paging.html'
         },
         lambda: {
             'id': 'settings',
@@ -92,7 +91,7 @@ class Category:
         if self.path is None:
             self.path = '/msx/category'
             self.params = {'category': self.id, 'page': '{PAGE}'}
-            self.interaction = f'{server.host}/paging.html'
+            self.interaction = f'{server.base_url}/paging.html'
         else:
             self.params = data.get('params', {})
             self.interaction = data.get('interaction')

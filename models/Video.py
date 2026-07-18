@@ -23,6 +23,9 @@ class Video(Playable):
     ):
         return {
             'label': self.title,
+            'titleFooter': self.footer(),
+            'progress': self.progress(),
+            'image': self.thumbnail,
             'action': self.msx_action(
                 proxy=proxy,
                 alternative_player=alternative_player

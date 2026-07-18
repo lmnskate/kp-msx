@@ -1,3 +1,5 @@
+from urllib.parse import urlparse
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -10,7 +12,15 @@ class ServerSettings(BaseSettings):
 
     host: str
     port: int = 1234
+    scheme: str = 'http'
     sqlite_url: str = './kp-sqlite.db'
+
+    @property
+    def base_url(self) -> str:
+        if '://' in self.host:
+            parsed = urlparse(self.host)
+            return f'{parsed.scheme}://{parsed.netloc}'
+        return f'{self.scheme}://{self.host}:{self.port}'
 
 
 class KPSettings(BaseSettings):
@@ -23,6 +33,7 @@ class KPSettings(BaseSettings):
     client_id: str
     client_secret: str
     protocol: str = 'hls4'
+    quality: str = '1080p'
 
 
 server = ServerSettings()

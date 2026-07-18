@@ -12,32 +12,32 @@ class CategoryExtra:
                 'extra': 'fresh',
                 'page': '{PAGE}'
             },
-            'interaction': f'{server.host}/paging.html'
-        },
-        lambda: {
-            'title': 'Горячие',
-            'layout': '3,0,3,1',
-            'path': '/msx/category',
-            'params': {
-                'extra': 'hot',
-                'page': '{PAGE}'
-            },
-            'interaction': f'{server.host}/paging.html'
+            'interaction': f'{server.base_url}/paging.html'
         },
         lambda: {
             'title': 'Популярные',
-            'layout': '6,0,3,1',
+            'layout': '3,0,3,1',
             'path': '/msx/category',
             'params': {
                 'extra': 'popular',
                 'page': '{PAGE}'
             },
-            'interaction': f'{server.host}/paging.html'
+            'interaction': f'{server.base_url}/paging.html'
         },
         lambda: {
             'title': 'Жанры',
-            'layout': '9,0,3,1',
+            'layout': '6,0,3,1',
             'path': '/msx/genres'
+        },
+        lambda: {
+            'title': 'Лучшие',
+            'layout': '9,0,3,1',
+            'path': '/msx/category',
+            'params': {
+                'sort': 'views-',
+                'page': '{PAGE}'
+            },
+            'interaction': f'{server.base_url}/paging.html'
         }
     ]
 

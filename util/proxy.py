@@ -35,7 +35,7 @@ async def close_session() -> None:
 def make_proxy_url(url):
     domain = urlparse(url).netloc
     remember_domain(domain)
-    return f'{server.host}/msx/proxy?' + urlencode({'url': url})
+    return f'{server.base_url}/msx/proxy?' + urlencode({'url': url})
 
 
 def domain_exists(domain):
@@ -68,7 +68,7 @@ def rewrite_domain(url: str, content: str) -> str:
 
     def replace_match(x: re.Match):
         a, b, c = x.groups()
-        r = f'{server.host}/msx/proxy?' + urlencode({'url': f'{prefix}/{b}'})
+        r = f'{server.base_url}/msx/proxy?' + urlencode({'url': f'{prefix}/{b}'})
         return a + r + c
 
     content = re.sub(
