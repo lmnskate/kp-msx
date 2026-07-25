@@ -7,7 +7,7 @@ from util.msx.settings import settings_screen
 def start():
     return {
         'name': 'Kinopub',
-        'version': '2.1.0',
+        'version': '2.1.1',
         'parameter': format_action('/msx/menu', module='menu'),
         'welcome': 'none',
         'launcher': {

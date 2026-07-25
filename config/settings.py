@@ -12,6 +12,11 @@ class ServerSettings(BaseSettings):
     port: int = 1234
     scheme: str = 'http'
     sqlite_url: str = './kp-sqlite.db'
+    # Where uvicorn actually listens. Defaults to 0.0.0.0:port; override both
+    # when a reverse proxy (e.g. nginx) holds the public port on the same
+    # machine — see "Running behind nginx" in README.md.
+    bind_host: str = '0.0.0.0'
+    bind_port: int | None = None
     workers: int = 1
     proxy_headers: bool = False
 

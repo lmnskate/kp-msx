@@ -85,6 +85,95 @@ sudo systemctl status kp-msx
 journalctl -u kp-msx -f
 ```
 
+## Running behind nginx (optional)
+
+nginx is not required — the app works fine on its own. Use it if you want a
+proper reverse proxy in front: nginx holds the public port, serves the icons
+from disk, and the app stays hidden on localhost.
+
+The split of responsibilities:
+
+- **nginx** — binds the public address (`1234` in this example), proxies
+  everything to the app, serves `/icons/` directly.
+- **The app** — binds a private localhost address (`127.0.0.1:8000`) via
+  `SERVER_BIND_HOST`/`SERVER_BIND_PORT`, while `SERVER_HOST`/`SERVER_PORT`
+  keep the **public** values so the links generated for the TV point at nginx.
+
+### 1. Configure the app (`.env`)
+
+```ini
+SERVER_HOST=<your-server-ip>   # public address used in generated links
+SERVER_PORT=1234               # public nginx port
+SERVER_BIND_HOST=127.0.0.1
+SERVER_BIND_PORT=8000
+SERVER_PROXY_HEADERS=true
+```
+
+Start the app as usual (`.venv/bin/python main.py` or the systemd unit above)
+and verify it listens on the bind address:
+
+```bash
+curl http://127.0.0.1:8000/msx/start.json
+```
+
+### 2. Configure nginx
+
+Create `/etc/nginx/sites-available/kp-msx` (adjust the IP and paths):
+
+```nginx
+upstream kp_msx {
+    server 127.0.0.1:8000;   # must match SERVER_BIND_HOST:SERVER_BIND_PORT
+}
+
+server {
+    listen 1234;             # must match SERVER_PORT
+    server_name <your-server-ip>;
+
+    # Serve icons directly from disk, bypassing the app
+    location /icons/ {
+        alias /home/user/kp-msx/icons/;
+        access_log off;
+        expires 7d;
+        add_header Access-Control-Allow-Origin * always;
+    }
+
+    location / {
+        proxy_pass http://kp_msx;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Connection "";
+        proxy_buffering off;        # don't buffer video streams
+        proxy_read_timeout 300s;    # long-lived HLS requests
+    }
+}
+```
+
+Enable and start it:
+
+```bash
+sudo ln -s /etc/nginx/sites-available/kp-msx /etc/nginx/sites-enabled/kp-msx
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+### 3. Verify end to end
+
+```bash
+curl http://<your-server-ip>:1234/msx/start.json   # through nginx
+```
+
+Then point the TV at `http://<your-server-ip>:1234` as usual.
+
+Troubleshooting: a `502 Bad Gateway` with `connect() failed ... 127.0.0.1:8000`
+in the nginx error log means the app is not listening on the bind address —
+check `SERVER_BIND_HOST`/`SERVER_BIND_PORT` against the `upstream` block.
+
+For HTTPS, terminate TLS in nginx (e.g. with certbot) and set
+`SERVER_SCHEME=https` and `SERVER_PORT=443` in `.env`.
+
 ## Environment variables
 
 Variables are loaded from `.env`. See `.env.example` for a template.
@@ -97,6 +186,8 @@ Variables are loaded from `.env`. See `.env.example` for a template.
 | `SERVER_PORT`        | Public port used to generate links                  | `1234`            |
 | `SERVER_SCHEME`      | Scheme for public links (`http` or `https`)         | `http`            |
 | `SERVER_SQLITE_URL`  | SQLite database path                                | `./kp-sqlite.db`  |
+| `SERVER_BIND_HOST`   | Address the server actually listens on (see "Running behind nginx") | `0.0.0.0` |
+| `SERVER_BIND_PORT`   | Port the server actually listens on (override together with `SERVER_BIND_HOST`) | `SERVER_PORT` |
 | `SERVER_WORKERS`     | Number of uvicorn worker processes                  | `1`               |
 | `SERVER_PROXY_HEADERS` | Trust `X-Forwarded-*` headers from a reverse proxy (`true`/`false`) | `false` |
 

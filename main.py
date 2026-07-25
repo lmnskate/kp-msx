@@ -135,8 +135,8 @@ async def auth(request: Request, call_next):
 if __name__ == '__main__':
     uvicorn.run(
         app='main:app',
-        host='0.0.0.0',
-        port=server.port,
+        host=server.bind_host,
+        port=server.bind_port or server.port,
         proxy_headers=server.proxy_headers,
         workers=server.workers
     )
