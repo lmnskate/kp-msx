@@ -48,28 +48,21 @@ app.mount(
 )
 
 
-@app.middleware('http')
-async def cache_icons(request: Request, call_next):
-    try:
-        response = await call_next(request)
-    except ExceptionGroup:
-        logger.exception('Unhandled ExceptionGroup in cache_icons')
-        return cors_json_response(msx.handle_exception())
-    except Exception:
-        logger.exception('Unhandled error in cache_icons')
-        return cors_json_response(msx.handle_exception())
-
-    if str(request.url.path).startswith('/icons/'):
-        response.headers['Cache-Control'] = 'public, max-age=604800'
-    return response
-
 UNAUTHORIZED_PATHS = frozenset([
     '/',
     '/subtitleShifter',
     '/paging.html',
     '/paging.js',
+    '/html5x.html',
+    '/html5x.js',
+    '/hlsx.html',
+    '/hlsx.js',
+    '/hlsx-common.css',
+    '/hlsx-subtitles.css',
+    '/hlsx-roboto.css',
     '/msx/start.json',
     '/msx/proxy',
+    '/msx/subtitle',
     '/msx/registration/code_image'
 ])
 
@@ -78,6 +71,26 @@ def cors_json_response(data):
     response = JSONResponse(data)
     response.headers['Access-Control-Allow-Credentials'] = 'true'
     response.headers['Access-Control-Allow-Origin'] = '*'
+    return response
+
+
+async def execute_guarded(request: Request, call_next, context: str):
+    try:
+        return await call_next(request)
+    except ExceptionGroup:
+        logger.exception('Unhandled ExceptionGroup in %s', context)
+        return cors_json_response(msx.handle_exception())
+    except Exception:
+        logger.exception('Unhandled error in %s', context)
+        return cors_json_response(msx.handle_exception())
+
+
+@app.middleware('http')
+async def cache_icons(request: Request, call_next):
+    response = await execute_guarded(request, call_next, 'cache_icons')
+
+    if str(request.url.path).startswith('/icons/'):
+        response.headers['Cache-Control'] = 'public, max-age=604800'
     return response
 
 
@@ -113,13 +126,7 @@ async def auth(request: Request, call_next):
             device.update_user_agent(ua)
 
     try:
-        return await call_next(request)
-    except ExceptionGroup:
-        logger.exception('Unhandled ExceptionGroup in request')
-        return cors_json_response(msx.handle_exception())
-    except Exception:
-        logger.exception('Unhandled error in request')
-        return cors_json_response(msx.handle_exception())
+        return await execute_guarded(request, call_next, 'request')
     finally:
         if device is not None and device.kp is not None:
             await device.kp.close_session()
@@ -127,7 +134,9 @@ async def auth(request: Request, call_next):
 
 if __name__ == '__main__':
     uvicorn.run(
-        app=app,
+        app='main:app',
         host='0.0.0.0',
-        port=int(server.port)
+        port=server.port,
+        proxy_headers=server.proxy_headers,
+        workers=server.workers
     )

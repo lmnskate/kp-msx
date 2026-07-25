@@ -57,96 +57,54 @@ class KinoPub:
 
         try:
             if method == 'GET':
-                async with session.get(url, params=params) as response:
-                    # handle auth retry
-                    if response.status == 401 and not retried:
-                        reauth_result = await self.refresh_tokens()
-                        if reauth_result:
-                            return await self.api(
-                                path,
-                                params=params,
-                                method=method,
-                                retried=True
-                            )
-                        return None
-
-                    if not (200 <= response.status < 300):
-                        text = await response.text()
-                        logger.warning(
-                            'Unexpected status %s from %s: %s',
-                            response.status,
-                            url,
-                            (text or '')[:300]
-                        )
-                        return None
-
-                    content_type = response.headers.get('Content-Type', '')
-                    if 'application/json' not in content_type:
-                        text = await response.text()
-                        logger.warning(
-                            'Attempt to decode JSON with unexpected mimetype: %s from %s: %s',
-                            content_type,
-                            url,
-                            (text or '')[:300]
-                        )
-                        return None
-
-                    try:
-                        return await response.json()
-                    except Exception as e:
-                        text = await response.text()
-                        logger.warning(
-                            'Failed to parse JSON from %s: %s; body=%s',
-                            url,
-                            e,
-                            (text or '')[:300]
-                        )
-                        return None
+                context = session.get(url, params=params)
             else:
-                async with session.request(method, url, json=params) as response:
-                    if response.status == 401 and not retried:
-                        reauth_result = await self.refresh_tokens()
-                        if reauth_result:
-                            return await self.api(
-                                path,
-                                params=params,
-                                method=method,
-                                retried=True
-                            )
-                        return None
+                context = session.request(method, url, json=params)
 
-                    if not (200 <= response.status < 300):
-                        text = await response.text()
-                        logger.warning(
-                            'Unexpected status %s from %s: %s',
-                            response.status,
-                            url,
-                            (text or '')[:300]
+            async with context as response:
+                if response.status == 401 and not retried:
+                    reauth_result = await self.refresh_tokens()
+                    if reauth_result:
+                        return await self.api(
+                            path,
+                            params=params,
+                            method=method,
+                            retried=True
                         )
-                        return None
+                    return None
 
-                    content_type = response.headers.get('Content-Type', '')
-                    if 'application/json' not in content_type:
-                        text = await response.text()
-                        logger.warning(
-                            'Attempt to decode JSON with unexpected mimetype: %s from %s: %s',
-                            content_type,
-                            url,
-                            (text or '')[:300]
-                        )
-                        return None
+                if not (200 <= response.status < 300):
+                    text = await response.text()
+                    logger.warning(
+                        'Unexpected status %s from %s: %s',
+                        response.status,
+                        url,
+                        (text or '')[:300]
+                    )
+                    return None
 
-                    try:
-                        return await response.json()
-                    except Exception as e:
-                        text = await response.text()
-                        logger.warning(
-                            'Failed to parse JSON from %s: %s; body=%s',
-                            url,
-                            e,
-                            (text or '')[:300]
-                        )
-                        return None
+                content_type = response.headers.get('Content-Type', '')
+                if 'application/json' not in content_type:
+                    text = await response.text()
+                    logger.warning(
+                        'Attempt to decode JSON with unexpected mimetype: %s from %s: %s',
+                        content_type,
+                        url,
+                        (text or '')[:300]
+                    )
+                    return None
+
+                try:
+                    return await response.json()
+                except Exception as e:
+                    text = await response.text()
+                    logger.warning(
+                        'Failed to parse JSON from %s: %s; body=%s',
+                        url,
+                        e,
+                        (text or '')[:300]
+                    )
+                    return None
         except asyncio.TimeoutError as e:
             logger.warning('Timeout while requesting %s: %s', url, e)
             return None

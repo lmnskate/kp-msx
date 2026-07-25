@@ -1,7 +1,7 @@
 from config.settings import kp
 from models.SubtitleTrack import SubtitleTrack
 from util import msx
-from util.proxy import make_proxy_url
+from util.proxy import make_proxy_url, make_subtitle_url
 
 
 class Playable:
@@ -77,9 +77,20 @@ class Playable:
         props.update(msx.DEFAULT_PLAY_BUTTON_PROPS)
 
         subtitle_prefix = 'html5x' if alternative_player else 'hlsjs'
-        for track in self.subtitles:
-            props[f'{subtitle_prefix}:subtitle:{track.lang}:{track.lang.upper()}'] = (
-                track.url if not proxy else make_proxy_url(track.url)
-            )
+        for index, track in enumerate(self.subtitles, start=1):
+            # Same style as the subtitle track names in the KinoPub HLS
+            # manifest ("RUS #01", "ENG #02")
+            label = f'{track.lang.upper()} #{index:02d}'
+
+            if alternative_player:
+                # The html5x player requires WebVTT, so subtitles are always
+                # routed through the converting endpoint
+                url = make_subtitle_url(track.url)
+            elif proxy:
+                url = make_proxy_url(track.url)
+            else:
+                url = track.url
+
+            props[f'{subtitle_prefix}:subtitle:{track.lang}:{label}'] = url
 
         return props

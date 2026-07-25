@@ -39,7 +39,3 @@ WATCH_BUTTON_ID = 'watch_button'
 TRAILER_BUTTON_ID = 'trailer_button'
 SIMILAR_BUTTON_ID = 'similar_button'
 CLEAR_HISTORY_BUTTON_ID = 'clear_history_button'
-
-# Player URLs
-PLAYER_URL = 'https://slonopot.github.io/msx-hlsx/hlsx.html'
-ALTERNATIVE_PLAYER_URL = 'http://msx.benzac.de/plugins/html5x.html'

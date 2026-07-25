@@ -1,5 +1,3 @@
-from urllib.parse import urlparse
-
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -14,12 +12,11 @@ class ServerSettings(BaseSettings):
     port: int = 1234
     scheme: str = 'http'
     sqlite_url: str = './kp-sqlite.db'
+    workers: int = 1
+    proxy_headers: bool = False
 
     @property
     def base_url(self) -> str:
-        if '://' in self.host:
-            parsed = urlparse(self.host)
-            return f'{parsed.scheme}://{parsed.netloc}'
         return f'{self.scheme}://{self.host}:{self.port}'
 
 

@@ -20,9 +20,33 @@ async def proxy_request(
     url = request.query_params.get('url')
     try:
         proxy.check_url(url)
-        code, content_type, contents = await proxy.get(url)
+        code, content_type, contents = await proxy.get(
+            url,
+            audio_name=request.query_params.get('audio')
+        )
     except Exception:
         logger.warning('Proxy request failed: %s', url)
+        return Response(
+            status_code=403
+        )
+
+    return Response(
+        contents,
+        code,
+        media_type=content_type
+    )
+
+
+@router.get('/subtitle')
+async def subtitle_request(
+    request: Request
+):
+    url = request.query_params.get('url')
+    try:
+        proxy.check_url(url)
+        code, content_type, contents = await proxy.get_subtitle(url)
+    except Exception:
+        logger.warning('Subtitle request failed: %s', url)
         return Response(
             status_code=403
         )

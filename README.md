@@ -21,8 +21,13 @@ python -m venv .venv
 cp .env.example .env
 
 # Running
-.venv/bin/uvicorn --host 0.0.0.0 --port 1234 api:app
+.venv/bin/python main.py
 ```
+
+`python main.py` is the canonical way to run the server, development or
+production: it binds `0.0.0.0:SERVER_PORT` and runs uvicorn with
+`SERVER_WORKERS` processes and `SERVER_PROXY_HEADERS`. Everything is
+configured through `.env` — no command-line flags needed.
 
 To verify, open `http://<your-ip>:1234/msx/start.json` in a browser.
 
@@ -50,9 +55,8 @@ Group=user
 
 WorkingDirectory=/home/user/kp-msx
 
-EnvironmentFile=/home/user/kp-msx/.env
-
-ExecStart=/home/user/kp-msx/.venv/bin/uvicorn api:app --host 0.0.0.0 --port 1234 --proxy-headers --workers 4
+# main.py reads .env itself; workers and proxy-headers are configured there.
+ExecStart=/home/user/kp-msx/.venv/bin/python main.py
 
 Restart=always
 RestartSec=5
@@ -93,6 +97,8 @@ Variables are loaded from `.env`. See `.env.example` for a template.
 | `SERVER_PORT`        | Public port used to generate links                  | `1234`            |
 | `SERVER_SCHEME`      | Scheme for public links (`http` or `https`)         | `http`            |
 | `SERVER_SQLITE_URL`  | SQLite database path                                | `./kp-sqlite.db`  |
+| `SERVER_WORKERS`     | Number of uvicorn worker processes                  | `1`               |
+| `SERVER_PROXY_HEADERS` | Trust `X-Forwarded-*` headers from a reverse proxy (`true`/`false`) | `false` |
 
 ### KinoPub API (`KP_` prefix)
 
@@ -106,7 +112,7 @@ Variables are loaded from `.env`. See `.env.example` for a template.
 ## Project structure
 
 ```
-api.py              # FastAPI app, middleware, router includes
+main.py              # FastAPI app, middleware, router includes
 config/
     settings.py     # Pydantic settings (ServerSettings, KPSettings), loaded from .env
     globals.py      # Constants: API URLs, timeouts, UI IDs, player URLs
@@ -119,9 +125,9 @@ routers/
     proxy.py        # Media proxy, HLS rewriting, error pages
 models/             # Data models (Content, Device, KinoPub client, etc.)
 util/
-    msx.py          # MSX JSON response builders
+    msx/            # MSX JSON response builders (core, menu, settings, registration, player)
     proxy.py        # Domain-allowlist proxy
     db.py           # SQLite storage
     sqlite_migrations.py # Schema migrations
-pages/              # Static HTML/JS (subtitle timing tool at /subtitleShifter)
+pages/              # Static HTML/JS: self-hosted hlsx/html5x video player plugins, helper pages
 ```

@@ -14,6 +14,24 @@ router = APIRouter(
 )
 
 
+def _page(request: Request) -> int:
+    return int(request.query_params.get('page') or 1)
+
+
+async def _get_content(device, request: Request):
+    return await device.kp.get_single_content(
+        request.query_params.get('content_id')
+    )
+
+
+async def _ensure_bookmark_folders(kp):
+    folders = await kp.get_bookmark_folders()
+    if len(folders) == 0:
+        await kp.create_bookmark_folder()
+        folders = await kp.get_bookmark_folders()
+    return folders
+
+
 @router.get('/menu')
 async def menu(
     request: Request
@@ -47,7 +65,7 @@ async def category(
 ):
     device = request.state.device
 
-    page = int(request.query_params.get('page') or 1)
+    page = _page(request)
     cat = request.query_params.get('category')
     extra = request.query_params.get('extra')
     genre = request.query_params.get('genre')
@@ -86,10 +104,7 @@ async def bookmarks(
     request: Request
 ):
     device = request.state.device
-    result = await device.kp.get_bookmark_folders()
-    if len(result) == 0:
-        await device.kp.create_bookmark_folder()
-        result = await device.kp.get_bookmark_folders()
+    result = await _ensure_bookmark_folders(device.kp)
     return msx.bookmark_folders(result)
 
 
@@ -110,7 +125,7 @@ async def folder(
     request: Request
 ):
     device = request.state.device
-    page = int(request.query_params.get('page') or 1)
+    page = _page(request)
     folder_id = request.query_params.get('folder')
     result = await device.kp.get_bookmark_folder(folder_id, page=page)
     return msx.content_list(
@@ -125,9 +140,7 @@ async def content_detail(
     request: Request
 ):
     device = request.state.device
-    result = await device.kp.get_single_content(
-        request.query_params.get('content_id')
-    )
+    result = await _get_content(device, request)
     if result is None:
         return msx.handle_exception()
     return result.to_msx_panel(
@@ -142,9 +155,7 @@ async def multivideo(
     request: Request
 ):
     device = request.state.device
-    result = await device.kp.get_single_content(
-        request.query_params.get('content_id')
-    )
+    result = await _get_content(device, request)
     if result is None:
         return msx.handle_exception()
     return result.to_multivideo_msx_panel(
@@ -160,16 +171,13 @@ async def content_bookmarks(
     device = request.state.device
     content_id = request.query_params.get('content_id')
 
-    result = await device.kp.get_single_content(content_id)
+    result = await _get_content(device, request)
     if result is None:
         return msx.handle_exception()
     content_folders = await device.kp.get_content_folders(content_id)
     result.update_bookmarks(content_folders)
 
-    folders = await device.kp.get_bookmark_folders()
-    if len(folders) == 0:
-        await device.kp.create_bookmark_folder()
-        folders = await device.kp.get_bookmark_folders()
+    folders = await _ensure_bookmark_folders(device.kp)
 
     return result.to_bookmarks_msx_panel(folders)
 
@@ -179,9 +187,7 @@ async def seasons(
     request: Request
 ):
     device = request.state.device
-    result = await device.kp.get_single_content(
-        request.query_params.get('content_id')
-    )
+    result = await _get_content(device, request)
     if result is None:
         return msx.handle_exception()
     return result.to_seasons_msx_panel()
@@ -192,9 +198,7 @@ async def episodes(
     request: Request
 ):
     device = request.state.device
-    result = await device.kp.get_single_content(
-        request.query_params.get('content_id')
-    )
+    result = await _get_content(device, request)
     if result is None:
         return msx.handle_exception()
     return result.to_episodes_msx_panel(
@@ -223,7 +227,7 @@ async def history(
     request: Request
 ):
     device = request.state.device
-    page = int(request.query_params.get('page') or 1)
+    page = _page(request)
     result = await device.kp.get_history(page=page)
     return msx.content_list(
         result,
@@ -326,7 +330,7 @@ async def play(
     season = request.query_params.get('season')
     episode = request.query_params.get('episode')
 
-    result = await device.kp.get_single_content(content_id)
+    result = await _get_content(device, request)
     if result is None:
         return msx.empty_response()
 
@@ -358,7 +362,7 @@ async def toggle_subscription(
     device = request.state.device
     content_id = request.query_params.get('content_id')
     await device.kp.toggle_subscription(content_id)
-    result = await device.kp.get_single_content(content_id)
+    result = await _get_content(device, request)
     if result is None:
         return msx.empty_response()
     return msx.update_panel(
@@ -376,7 +380,7 @@ async def toggle_bookmark(
     folder_id = int(request.query_params.get('folder_id') or 0)
 
     await device.kp.toggle_bookmark(content_id, folder_id)
-    result = await device.kp.get_single_content(content_id)
+    result = await _get_content(device, request)
     if result is None:
         return msx.empty_response()
     content_folders = await device.kp.get_content_folders(content_id)
