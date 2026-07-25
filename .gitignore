@@ -2,6 +2,7 @@ kp-sqlite.db
 nginx.conf
 AGENTS.md
 tools/
+TODO.md
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
