@@ -36,7 +36,9 @@ class Video(Playable):
             )
         }
 
-    def trigger_ready(self):
+    def trigger_ready(
+        self
+    ):
         return msx.format_action(
             path='/msx/play',
             params={
@@ -45,8 +47,12 @@ class Video(Playable):
             module='execute'
         )
 
-    def resume_key(self):
+    def resume_key(
+        self
+    ):
         return f'{self.content_id} {self.player_title()} {self.title}'
 
-    def player_title(self):
+    def player_title(
+        self
+    ):
         return self.content_title

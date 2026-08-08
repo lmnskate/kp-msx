@@ -20,7 +20,9 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app):
+async def lifespan(
+    app
+):
     yield
     await proxy_util.close_session()
 
@@ -33,8 +35,14 @@ app.add_middleware(
     allow_methods=['*'],
     allow_headers=['*']
 )
-app.add_middleware(GZipMiddleware, minimum_size=1000)
-app.add_middleware(BrotliMiddleware, minimum_size=1000)
+app.add_middleware(
+    GZipMiddleware,
+    minimum_size=1000
+)
+app.add_middleware(
+    BrotliMiddleware,
+    minimum_size=1000
+)
 
 app.include_router(static.router)
 app.include_router(registration.router)
@@ -67,14 +75,21 @@ UNAUTHORIZED_PATHS = frozenset([
 ])
 
 
-def cors_json_response(data):
+def cors_json_response(
+    data
+):
     response = JSONResponse(data)
     response.headers['Access-Control-Allow-Credentials'] = 'true'
     response.headers['Access-Control-Allow-Origin'] = '*'
+
     return response
 
 
-async def execute_guarded(request: Request, call_next, context: str):
+async def execute_guarded(
+    request: Request,
+    call_next,
+    context: str
+):
     try:
         return await call_next(request)
     except ExceptionGroup:
@@ -86,23 +101,38 @@ async def execute_guarded(request: Request, call_next, context: str):
 
 
 @app.middleware('http')
-async def cache_icons(request: Request, call_next):
-    response = await execute_guarded(request, call_next, 'cache_icons')
+async def cache_icons(
+    request: Request,
+    call_next
+):
+    response = await execute_guarded(
+        request,
+        call_next,
+        context='cache_icons'
+    )
 
     if str(request.url.path).startswith('/icons/'):
         response.headers['Cache-Control'] = 'public, max-age=604800'
+
     return response
 
 
 @app.middleware('http')
-async def auth(request: Request, call_next):
+async def auth(
+    request: Request,
+    call_next
+):
     if request.method == 'OPTIONS':
         return await call_next(request)
 
     path = str(request.url.path)
     device_id = request.query_params.get('id')
 
-    if device_id is None and path not in UNAUTHORIZED_PATHS and not path.startswith('/icons/'):
+    if (
+        device_id is None
+        and path not in UNAUTHORIZED_PATHS
+        and not path.startswith('/icons/')
+    ):
         return cors_json_response({
             'response': {
                 'status': 200,
@@ -110,7 +140,11 @@ async def auth(request: Request, call_next):
             }
         })
 
-    if device_id == '{ID}' and path not in UNAUTHORIZED_PATHS and not path.startswith('/icons/'):
+    if (
+        device_id == '{ID}'
+        and path not in UNAUTHORIZED_PATHS
+        and not path.startswith('/icons/')
+    ):
         return cors_json_response(msx.unsupported_version())
 
     request.state.device = None
@@ -126,7 +160,11 @@ async def auth(request: Request, call_next):
             device.update_user_agent(ua)
 
     try:
-        return await execute_guarded(request, call_next, 'request')
+        return await execute_guarded(
+            request,
+            call_next,
+            context='request'
+        )
     finally:
         if device is not None and device.kp is not None:
             await device.kp.close_session()

@@ -11,7 +11,10 @@ TOGGLE_BUTTONS = [
 
 
 class DeviceSettings:
-    def __init__(self, data):
+    def __init__(
+        self,
+        data
+    ):
         if data is None:
             data = {}
 
@@ -28,7 +31,9 @@ class DeviceSettings:
         self.poster_proxy = data.get('poster_proxy')
         self.server = data.get('server', LENNY)
 
-    def to_dict(self):
+    def to_dict(
+        self
+    ):
         return {
             'menu_blacklist': self.menu_blacklist,
             'uhd': self.uhd,
@@ -42,21 +47,30 @@ class DeviceSettings:
             'server': self.server
         }
 
-    def toggle_button(self, setting_id, label, value):
+    def toggle_button(
+        self,
+        setting_id,
+        label,
+        value
+    ):
         entry = msx.settings_button(
             setting_id,
             label,
             msx.format_action(
-                f'/msx/settings/toggle/{setting_id}', module='execute'
+                f'/msx/settings/toggle/{setting_id}',
+                module='execute'
             )
         )
         if setting_id in SWITCH_IDS:
             entry.update(msx.switch(value))
         else:
             entry.update(msx.stamp(value))
+
         return entry
 
-    def to_toggle_buttons(self):
+    def to_toggle_buttons(
+        self
+    ):
         return [
             self.toggle_button(
                 setting_id,
@@ -66,9 +80,14 @@ class DeviceSettings:
             for setting_id, label, attr in TOGGLE_BUTTONS
         ]
 
-    def to_menu_msx_button(self):
+    def to_menu_msx_button(
+        self
+    ):
         return msx.settings_button(
             MENU_ID,
             'Пункты меню',
-            msx.format_action('/msx/settings/menu_entries', module='panel')
+            msx.format_action(
+                '/msx/settings/menu_entries',
+                module='panel'
+            )
         )

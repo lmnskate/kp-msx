@@ -41,14 +41,20 @@ class CategoryExtra:
         }
     ]
 
-    def __init__(self, data):
+    def __init__(
+        self,
+        data
+    ):
         self.title = data.get('title')
         self.path = data.get('path')
         self.params = data.get('params', {})
         self.interaction = data.get('interaction')
         self.layout = data.get('layout')
 
-    def to_msx(self, category):
+    def to_msx(
+        self,
+        category
+    ):
         params = {**self.params, 'category': category}
 
         return {
@@ -64,5 +70,7 @@ class CategoryExtra:
         }
 
     @classmethod
-    def static_extras(cls):
+    def static_extras(
+        cls
+    ):
         return [cls(i()) for i in CategoryExtra.EXTRAS]

@@ -21,7 +21,9 @@ class ServerSettings(BaseSettings):
     proxy_headers: bool = False
 
     @property
-    def base_url(self) -> str:
+    def base_url(
+        self
+    ) -> str:
         return f'{self.scheme}://{self.host}:{self.port}'
 
 

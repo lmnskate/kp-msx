@@ -32,11 +32,17 @@ def already_registered():
     }
 
 
-def code_image(user_code):
-    return f'{server.base_url}/msx/registration/code_image?{urlencode({"code": user_code})}'
+def code_image(
+    user_code
+):
+    query = urlencode({'code': user_code})
+
+    return f'{server.base_url}/msx/registration/code_image?{query}'
 
 
-def registration(user_code):
+def registration(
+    user_code
+):
     return {
         'type': 'pages',
         'headline': 'Регистрация',

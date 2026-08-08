@@ -22,11 +22,18 @@ CODE_IMAGE_TEMPLATE = '''<?xml version="1.0" encoding="UTF-8"?>
 
 
 @router.get('/registration/code_image')
-async def registration_code_image(code: str):
+async def registration_code_image(
+    code: str
+):
     if not CODE_PATTERN.match(code):
         return Response(status_code=400)
+
     svg = CODE_IMAGE_TEMPLATE.format(code=escape(code))
-    return Response(svg, media_type='image/svg+xml')
+
+    return Response(
+        svg,
+        media_type='image/svg+xml'
+    )
 
 
 @router.get('/registration')
@@ -35,12 +42,14 @@ async def registration(
 ):
     if request.state.device.registered():
         return msx.already_registered()
+
     registration_codes = await KinoPub.get_codes()
     if registration_codes is None:
         return msx.handle_exception()
 
     user_code, device_code = registration_codes
     request.state.device.update_code(device_code)
+
     return msx.registration(user_code)
 
 
@@ -51,9 +60,11 @@ async def check_registration(
     result = await KinoPub.check_registration(request.state.device.code)
     if result is None:
         return msx.code_not_entered()
+
     request.state.device.update_tokens(
         result['access_token'],
         result['refresh_token']
     )
     await request.state.device.notify()
+
     return msx.restart()

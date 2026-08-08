@@ -2,7 +2,11 @@ from models.Episode import Episode
 
 
 class Season:
-    def __init__(self, data, content_id):
+    def __init__(
+        self,
+        data,
+        content_id
+    ):
         self.content_id = content_id
 
         self.n = data.get('number')
@@ -11,7 +15,9 @@ class Season:
 
         self.watched = all(episode.watched for episode in self.episodes)
 
-    def stamp(self):
+    def stamp(
+        self
+    ):
         if self.watched:
             return '{ico:check}'
         watched = sum(episode.watched for episode in self.episodes)
@@ -47,4 +53,5 @@ class Season:
             if episode.watched:
                 item['stamp'] = '{ico:check}'
             items.append(item)
+
         return items

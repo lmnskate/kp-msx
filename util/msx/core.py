@@ -19,7 +19,9 @@ DEFAULT_PLAY_BUTTON_PROPS = {
 }
 
 
-def icon(name):
+def icon(
+    name
+):
     return f'{server.base_url}/icons/{name}.svg'
 
 
@@ -88,14 +90,22 @@ def sad_screen():
     }
 
 
-def build_list(layout, items, *, template_extra=None, **kwargs):
+def build_list(
+    layout,
+    items,
+    *,
+    template_extra=None,
+    **kwargs
+):
     template = {
         'type': 'separate',
         'layout': layout,
         'color': 'msx-glass',
     }
+
     if template_extra:
         template.update(template_extra)
+
     return {
         'type': 'list',
         'template': template,
@@ -104,7 +114,10 @@ def build_list(layout, items, *, template_extra=None, **kwargs):
     }
 
 
-def update_panel(content_id, value):
+def update_panel(
+    content_id,
+    value
+):
     return {
         'response': {
             'status': 200,
@@ -121,7 +134,9 @@ def restart():
     return {'response': {'status': 200, 'data': {'action': 'reload'}}}
 
 
-def handle_exception(error_page=False):
+def handle_exception(
+    error_page=False
+):
     msg = {
         'type': 'space',
         'layout': '0,0,8,2',
@@ -130,6 +145,7 @@ def handle_exception(error_page=False):
         'headline': 'Произошла ошибка загрузки',
         'text': 'Скорее всего, кинопаб сейчас недоступен - проверьте статус на kino.pub и ожидайте ремонта'
     }
+
     restart_app_btn = {
         'type': 'button',
         'layout': '1,2,6,1',
@@ -137,6 +153,7 @@ def handle_exception(error_page=False):
         'label': 'Перезапустить приложение',
         'action': 'reload'
     }
+
     reload_content_btn = {
         'type': 'button',
         'layout': '1,3,6,1',
@@ -144,6 +161,7 @@ def handle_exception(error_page=False):
         'label': 'Перезагрузить раздел',
         'action': 'reload:content'
     }
+
     reload_panel_btn = {
         'type': 'button',
         'layout': '1,4,6,1',

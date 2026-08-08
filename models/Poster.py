@@ -1,3 +1,6 @@
+from util.proxy import remember_url
+
+
 class Poster:
     SIZES = ['big', 'medium', 'small']
     PROXIES = [
@@ -19,13 +22,21 @@ class Poster:
         },
     ]
 
-    def __init__(self, data):
+    def __init__(
+        self,
+        data
+    ):
         self.big = data.get('big')
         self.medium = data.get('medium')
         self.small = data.get('small')
         self.wide = data.get('wide')
+        for url in (self.big, self.medium, self.small, self.wide):
+            remember_url(url)
 
-    def get(self, device_settings=None):
+    def get(
+        self,
+        device_settings=None
+    ):
         if device_settings is None:
             poster_size = None
             poster_proxy = None
@@ -34,19 +45,38 @@ class Poster:
             poster_proxy = device_settings.poster_proxy
 
         poster_url = getattr(self, poster_size, None) or self.big
-        return self._proxy_by_id(poster_proxy)['template'].format(url=poster_url)
+        url = self._proxy_by_id(poster_proxy)['template'].format(url=poster_url)
+        remember_url(url)
 
-    def get_wide(self, device_settings=None):
+        return url
+
+    def get_wide(
+        self,
+        device_settings=None
+    ):
         if not self.wide:
             return None
         proxy = device_settings.poster_proxy if device_settings else None
-        return self._proxy_by_id(proxy)['template'].format(url=self.wide)
+        url = self._proxy_by_id(proxy)['template'].format(url=self.wide)
+        remember_url(url)
 
-    def format(self, size, proxy):
+        return url
+
+    def format(
+        self,
+        size,
+        proxy
+    ):
         url = getattr(self, size, None) or self.big
-        return self._proxy_by_id(proxy)['template'].format(url=url)
+        url = self._proxy_by_id(proxy)['template'].format(url=url)
+        remember_url(url)
 
-    def _proxy_by_id(self, proxy_id):
+        return url
+
+    def _proxy_by_id(
+        self,
+        proxy_id
+    ):
         for proxy in self.PROXIES:
             if proxy['id'] == proxy_id:
                 return proxy

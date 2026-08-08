@@ -27,20 +27,29 @@ logger = logging.getLogger(__name__)
 
 class KinoPub:
 
-    def __init__(self, token, refresh):
+    def __init__(
+        self,
+        token,
+        refresh
+    ):
         self.token = token
         self.refresh = refresh
         self.session: aiohttp.ClientSession | None = None
 
-    async def get_session(self) -> aiohttp.ClientSession:
+    async def get_session(
+        self
+    ) -> aiohttp.ClientSession:
         if self.session is None or self.session.closed:
             self.session = aiohttp.ClientSession(
                 headers={'Authorization': f'Bearer {self.token}'},
                 timeout=g.TIMEOUT
             )
+
         return self.session
 
-    async def close_session(self) -> None:
+    async def close_session(
+        self
+    ) -> None:
         if self.session is not None and not self.session.closed:
             await self.session.close()
         self.session = None
@@ -57,9 +66,16 @@ class KinoPub:
 
         try:
             if method == 'GET':
-                context = session.get(url, params=params)
+                context = session.get(
+                    url,
+                    params=params
+                )
             else:
-                context = session.request(method, url, json=params)
+                context = session.request(
+                    method,
+                    url,
+                    json=params
+                )
 
             async with context as response:
                 if response.status == 401 and not retried:
@@ -81,6 +97,7 @@ class KinoPub:
                         url,
                         (text or '')[:300]
                     )
+
                     return None
 
                 content_type = response.headers.get('Content-Type', '')
@@ -92,6 +109,7 @@ class KinoPub:
                         url,
                         (text or '')[:300]
                     )
+
                     return None
 
                 try:
@@ -104,6 +122,7 @@ class KinoPub:
                         e,
                         (text or '')[:300]
                     )
+
                     return None
         except asyncio.TimeoutError as e:
             logger.warning('Timeout while requesting %s: %s', url, e)
@@ -123,15 +142,28 @@ class KinoPub:
         params=None,
         default=None
     ):
-        result = await self.api(path, params=params)
+        result = await self.api(
+            path,
+            params=params
+        )
         if result is None:
             return default
+
         return [model(i) for i in result[key]]
 
-    async def get_content_categories(self):
-        return await self.fetch_list('/types', Category, default=[])
+    async def get_content_categories(
+        self
+    ):
+        return await self.fetch_list(
+            '/types',
+            Category,
+            default=[]
+        )
 
-    async def get_genres(self, category=None):
+    async def get_genres(
+        self,
+        category=None
+    ):
         return await self.fetch_list(
             '/genres',
             Genre,
@@ -158,6 +190,7 @@ class KinoPub:
             params['country'] = country
         if sort:
             params['sort'] = sort
+
         return await self.fetch_list(
             path,
             Content,
@@ -165,7 +198,10 @@ class KinoPub:
             default=[]
         )
 
-    async def search(self, query):
+    async def search(
+        self,
+        query
+    ):
         return await self.fetch_list(
             '/items/search',
             Content,
@@ -173,23 +209,39 @@ class KinoPub:
             default=[]
         )
 
-    async def get_single_content(self, id):
+    async def get_single_content(
+        self,
+        id
+    ):
         result = await self.api(f'/items/{id}')
         if result is None:
             return None
+
         return Content(result['item'])
 
-    async def get_bookmark_folders(self):
-        return await self.fetch_list('/bookmarks', Folder, default=[])
+    async def get_bookmark_folders(
+        self
+    ):
+        return await self.fetch_list(
+            '/bookmarks',
+            Folder,
+            default=[]
+        )
 
-    async def create_bookmark_folder(self, name: str = 'Мои закладки'):
+    async def create_bookmark_folder(
+        self,
+        name: str = 'Мои закладки'
+    ):
         await self.api(
             '/bookmarks/create',
             {'title': name},
             method='POST'
         )
 
-    async def get_content_folders(self, content_id):
+    async def get_content_folders(
+        self,
+        content_id
+    ):
         return await self.fetch_list(
             '/bookmarks/get-item-folders',
             Folder,
@@ -198,25 +250,47 @@ class KinoPub:
             default=[]
         )
 
-    async def get_bookmark_folder(self, folder_id, page=1):
-        result = await self.api(f'/bookmarks/{folder_id}', {'page': page})
+    async def get_bookmark_folder(
+        self,
+        folder_id,
+        page=1
+    ):
+        result = await self.api(
+            f'/bookmarks/{folder_id}',
+            {'page': page}
+        )
         if result is None:
             return []
+
         try:
             current_page = result['pagination']['current']
             if page > current_page:
                 return []
         except (KeyError, TypeError):
             pass
+
         return [Content(i) for i in result['items']]
 
-    async def get_history(self, page=1):
-        result = await self.api('/history', {'page': page})
+    async def get_history(
+        self,
+        page=1
+    ):
+        result = await self.api(
+            '/history',
+            {'page': page}
+        )
         if result is None:
             return []
-        return [Content(i['item'], Media(i['media'], time=i.get('time'))) for i in result['history']]
 
-    async def get_watching(self, subscribed=0):
+        return [
+            Content(i['item'], Media(i['media'], time=i.get('time')))
+            for i in result['history']
+        ]
+
+    async def get_watching(
+        self,
+        subscribed=0
+    ):
         return await self.fetch_list(
             '/watching/serials',
             Content,
@@ -224,21 +298,28 @@ class KinoPub:
             default=[]
         )
 
-    async def get_watching_movies(self):
+    async def get_watching_movies(
+        self
+    ):
         return await self.fetch_list(
             '/watching/movies',
             Content,
             default=[]
         )
 
-    async def get_countries(self):
+    async def get_countries(
+        self
+    ):
         return await self.fetch_list(
             '/countries',
             Country,
             default=[]
         )
 
-    async def get_similar(self, content_id):
+    async def get_similar(
+        self,
+        content_id
+    ):
         return await self.fetch_list(
             '/items/similar',
             Content,
@@ -246,16 +327,23 @@ class KinoPub:
             default=[]
         )
 
-    async def get_user(self):
+    async def get_user(
+        self
+    ):
         return await self.api('/user')
 
-    async def clear_history_item(self, content_id):
+    async def clear_history_item(
+        self,
+        content_id
+    ):
         await self.api(
             f'/history/clear-for-item?id={content_id}',
             method='POST'
         )
 
-    async def get_tv(self):
+    async def get_tv(
+        self
+    ):
         return await self.fetch_list(
             '/tv',
             Channel,
@@ -263,7 +351,10 @@ class KinoPub:
             default=[]
         )
 
-    async def get_collections(self, page):
+    async def get_collections(
+        self,
+        page
+    ):
         return await self.fetch_list(
             '/collections',
             Collection,
@@ -271,7 +362,10 @@ class KinoPub:
             default=[]
         )
 
-    async def get_single_collection(self, collection_id):
+    async def get_single_collection(
+        self,
+        collection_id
+    ):
         return await self.fetch_list(
             '/collections/view',
             Content,
@@ -279,7 +373,10 @@ class KinoPub:
             default=[]
         )
 
-    async def notify(self, device_id):
+    async def notify(
+        self,
+        device_id
+    ):
         await self.api(
             '/device/notify',
             {
@@ -301,12 +398,26 @@ class KinoPub:
             params['season'] = season
         if episode is not None:
             params['video'] = episode
-        await self.api('/watching/toggle', params)
 
-    async def toggle_subscription(self, content_id):
-        await self.api('/watching/togglewatchlist', {'id': content_id})
+        await self.api(
+            '/watching/toggle',
+            params
+        )
 
-    async def toggle_bookmark(self, content_id, folder_id):
+    async def toggle_subscription(
+        self,
+        content_id
+    ):
+        await self.api(
+            '/watching/togglewatchlist',
+            {'id': content_id}
+        )
+
+    async def toggle_bookmark(
+        self,
+        content_id,
+        folder_id
+    ):
         await self.api(
             '/bookmarks/toggle-item',
             {
@@ -316,10 +427,13 @@ class KinoPub:
             method='POST'
         )
 
-    async def get_current_device_info(self) -> Device:
+    async def get_current_device_info(
+        self
+    ) -> Device:
         from models.Device import Device
 
         data = await self.api('/device/info')
+
         return Device(data.get('device', {}))
 
     async def update_device_setting(
@@ -343,15 +457,21 @@ class KinoPub:
         }
         try:
             async with aiohttp.ClientSession(timeout=g.TIMEOUT) as s:
-                response = await s.post(g.OAUTH_URL, params=params)
+                response = await s.post(
+                    g.OAUTH_URL,
+                    params=params
+                )
                 result = await response.json()
+
                 return result['user_code'], result['code']
         except (aiohttp.ClientError, asyncio.TimeoutError, KeyError) as e:
             logger.warning('Failed to fetch registration codes: %s', e)
             return None
 
     @staticmethod
-    async def check_registration(code):
+    async def check_registration(
+        code
+    ):
         params = {
             'grant_type': 'device_token',
             'client_id': kp.client_id,
@@ -360,16 +480,22 @@ class KinoPub:
         }
         try:
             async with aiohttp.ClientSession(timeout=g.TIMEOUT) as s:
-                response = await s.post(g.OAUTH_URL, params=params)
+                response = await s.post(
+                    g.OAUTH_URL,
+                    params=params
+                )
                 result = await response.json()
                 if result.get('error') is not None:
                     return None
+
                 return result
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             logger.warning('Failed to check device registration status: %s', e)
             return None
 
-    async def refresh_tokens(self):
+    async def refresh_tokens(
+        self
+    ):
         params = {
             'grant_type': 'refresh_token',
             'client_id': kp.client_id,
@@ -378,7 +504,10 @@ class KinoPub:
         }
         try:
             async with aiohttp.ClientSession(timeout=g.TIMEOUT) as s:
-                response = await s.post(g.OAUTH_URL, params=params)
+                response = await s.post(
+                    g.OAUTH_URL,
+                    params=params
+                )
                 result = await response.json()
                 if result.get('error') is not None:
                     return False
@@ -398,7 +527,9 @@ class KinoPub:
             logger.warning('Failed to refresh access token: %s', e)
             return False
 
-    async def get_available_servers(self):
+    async def get_available_servers(
+        self
+    ):
         return await self.fetch_list(
             '/references/server-location',
             Reference,

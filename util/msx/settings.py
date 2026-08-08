@@ -1,7 +1,9 @@
 from util.msx.core import format_action, icon
 
 
-def settings_screen(screen: bool = False):
+def settings_screen(
+    screen: bool = False
+):
     if screen:
         return {
             'type': 'pages',
@@ -78,21 +80,29 @@ def settings_screen(screen: bool = False):
     }
 
 
-def settings_menu(device_settings, user=None):
+def settings_menu(
+    device_settings,
+    user=None
+):
     items = []
+
     if user:
         info = user.get('user') or {}
         profile = info.get('profile') or {}
+
         entry = {
             'label': profile.get('name') or info.get('username'),
             'action': '[]',
             'imageWidth': 'small'
         }
+
         if profile.get('avatar'):
             entry['image'] = profile['avatar']
+
         days = (info.get('subscription') or {}).get('days')
         if days is not None:
             entry['extensionLabel'] = f'Подписка истекает через {int(days)} дн.'
+
         items.append(entry)
 
     items.extend([
@@ -108,24 +118,34 @@ def settings_menu(device_settings, user=None):
     }
 
 
-def stamp(cond):
+def stamp(
+    cond
+):
     return {
         'stampColor': 'msx-glass' if cond else 'transparent',
         'stamp': '{ico:check}' if cond else '{ico:blank}'
     }
 
 
-def switch(cond):
+def switch(
+    cond
+):
     return {
         'extensionLabel': 'Включено' if cond else 'Выключено'
     }
 
 
-def label(text):
+def label(
+    text
+):
     return {'label': text}
 
 
-def settings_button(id, label, action):
+def settings_button(
+    id,
+    label,
+    action
+):
     return {
         'id': id,
         'label': label,
@@ -133,7 +153,9 @@ def settings_button(id, label, action):
     }
 
 
-def menu_entries_settings_panel(categories: list):
+def menu_entries_settings_panel(
+    categories: list
+):
     return {
         'type': 'list',
         'headline': 'Пункты меню',
@@ -149,11 +171,14 @@ def menu_entries_settings_panel(categories: list):
     }
 
 
-def poster_settings_panel(posters):
+def poster_settings_panel(
+    posters
+):
     from models.Poster import Poster
 
     items = []
     i = 0
+
     for size in Poster.SIZES:
         for poster_proxy in Poster.PROXIES:
             items.append({

@@ -19,25 +19,36 @@ class Episode(Playable):
 
         self.watched = data.get('watched') == 1
 
-    def menu_title(self):
+    def menu_title(
+        self
+    ):
         title = self.title or 'Серия'
+
         return f'{self.n}. {title}'
 
-    def player_title(self):
+    def player_title(
+        self
+    ):
         title = self.title or 'Серия'
+
         return f'[S{self.season}/E{self.n}] {title}'
 
-    def trigger_ready(self):
+    def trigger_ready(
+        self
+    ):
         params = {
             'content_id': self.content_id,
             'season': self.season,
             'episode': self.n
         }
+
         return msx.format_action(
             '/msx/play',
             params=params,
             module='execute'
         )
 
-    def resume_key(self):
+    def resume_key(
+        self
+    ):
         return f'{self.content_id} {self.player_title()}'

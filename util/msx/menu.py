@@ -7,7 +7,7 @@ from util.msx.settings import settings_screen
 def start():
     return {
         'name': 'Kinopub',
-        'version': '2.1.1',
+        'version': '2.2.0',
         'parameter': format_action('/msx/menu', module='menu'),
         'welcome': 'none',
         'launcher': {
@@ -34,14 +34,18 @@ def unregistered_menu():
     }
 
 
-def registered_menu(categories: list):
+def registered_menu(
+    categories: list
+):
     menu = [
         category.to_msx()
         for category in (categories or [])
         if not category.blacklisted
     ]
+
     if not menu:
         menu = [sad_screen()]
+
     return {
         'reuse': False,
         'cache': False,
@@ -85,7 +89,11 @@ def content_list(
     return resp
 
 
-def collections(entries, *, device_settings=None):
+def collections(
+    entries,
+    *,
+    device_settings=None
+):
     return build_list(
         '0,0,3,6',
         [entry.to_msx(device_settings=device_settings) for entry in entries],
@@ -94,7 +102,9 @@ def collections(entries, *, device_settings=None):
     )
 
 
-def bookmark_folders(result):
+def bookmark_folders(
+    result
+):
     return build_list(
         '0,0,4,1',
         [i.to_msx() for i in result],
@@ -102,7 +112,10 @@ def bookmark_folders(result):
     )
 
 
-def genre_folders(category, result):
+def genre_folders(
+    category,
+    result
+):
     return build_list(
         '0,0,4,1',
         [i.to_msx(category) for i in result],
@@ -110,7 +123,10 @@ def genre_folders(category, result):
     )
 
 
-def country_list(category, result):
+def country_list(
+    category,
+    result
+):
     return build_list(
         '0,0,4,1',
         [i.to_msx(category) for i in result],
@@ -118,7 +134,10 @@ def country_list(category, result):
     )
 
 
-def tv_channels(channels, alternative_player: bool = False):
+def tv_channels(
+    channels,
+    alternative_player: bool = False
+):
     return {
         'type': 'list',
         'header': {

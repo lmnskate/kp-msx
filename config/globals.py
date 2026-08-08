@@ -12,6 +12,9 @@ HDR_SETTING = 'supportHdr'
 MIXED_PLAYLIST_SETTING = 'mixedPlaylist'
 SERVER_LOCATION_SETTING = 'serverLocation'
 
+# File with all CDN domains seen by the server (for domain-based routing)
+CDN_DOMAINS_FILE = 'cdn-domains.txt'
+
 # MSX text icons
 LENNY = '¯\\_(ツ)_/¯'
 SAD_LENNY = '(◡︵◡)'

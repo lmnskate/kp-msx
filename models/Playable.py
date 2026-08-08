@@ -1,21 +1,27 @@
 from config.settings import kp
 from models.SubtitleTrack import SubtitleTrack
 from util import msx
-from util.proxy import make_proxy_url, make_subtitle_url
+from util.proxy import make_proxy_url, make_subtitle_url, remember_url
 
 
 class Playable:
-    def __init__(self, data):
+    def __init__(
+        self,
+        data
+    ):
         self.title = data.get('title')
         self.video_url = Playable.extract_video_url(data)
         self.subtitles = [SubtitleTrack(s) for s in data.get('subtitles', [])]
         self.duration = data.get('duration')
         self.thumbnail = data.get('thumbnail')
+        remember_url(self.thumbnail)
         watching = data.get('watching') or {}
         self.watch_time = watching.get('time') or 0
         self.watched = data.get('watched') == 1
 
-    def progress(self):
+    def progress(
+        self
+    ):
         if (
             self.watched
             or not self.duration
@@ -25,7 +31,9 @@ class Playable:
             return None
         return round(100 * self.watch_time / self.duration)
 
-    def footer(self):
+    def footer(
+        self
+    ):
         parts = []
         if self.duration:
             parts.append(f'{self.duration // 60} мин')
@@ -33,10 +41,13 @@ class Playable:
             left = self.duration - self.watch_time
             if left > 0:
                 parts.append(f'осталось {left // 60} мин')
+
         return ' · '.join(parts) or None
 
     @staticmethod
-    def extract_video_url(data):
+    def extract_video_url(
+        data
+    ):
         files = data.get('files', [])
         best_file = None
 
@@ -78,6 +89,7 @@ class Playable:
 
         subtitle_prefix = 'html5x' if alternative_player else 'hlsjs'
         for index, track in enumerate(self.subtitles, start=1):
+            remember_url(track.url)
             # Same style as the subtitle track names in the KinoPub HLS
             # manifest ("RUS #01", "ENG #02")
             label = f'{track.lang.upper()} #{index:02d}'

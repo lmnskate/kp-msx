@@ -76,7 +76,11 @@ class Category:
         }
     ]
 
-    def __init__(self, data, blacklisted: bool = False):
+    def __init__(
+        self,
+        data,
+        blacklisted: bool = False
+    ):
         self.id = data.get('id')
         self.title = data.get('title')
         self.blacklisted = self.id in Category.BLACKLIST or blacklisted
@@ -97,8 +101,11 @@ class Category:
             self.interaction = data.get('interaction')
             self.options = data.get('options')
 
-    def to_msx(self):
+    def to_msx(
+        self
+    ):
         icon_name = self.icon or Category.ICON_MAP.get(self.id)
+
         return {
             'type': 'default',
             'label': self.title,
@@ -111,17 +118,23 @@ class Category:
             )
         }
 
-    def to_msx_settings_button(self):
+    def to_msx_settings_button(
+        self
+    ):
         entry = {
             'id': self.id,
             'label': self.title,
             'action': msx.format_action(
-                f'/msx/settings/toggle_menu_entry/{self.id}', module='execute'
+                f'/msx/settings/toggle_menu_entry/{self.id}',
+                module='execute'
             )
         }
         entry.update(msx.stamp(not self.blacklisted))
+
         return entry
 
     @classmethod
-    def static_categories(cls):
+    def static_categories(
+        cls
+    ):
         return [cls(i()) for i in Category.STATIC_CATEGORIES]

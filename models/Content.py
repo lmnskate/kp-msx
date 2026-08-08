@@ -8,7 +8,11 @@ from util import msx
 
 
 class Content:
-    def __init__(self, data, media=None):
+    def __init__(
+        self,
+        data,
+        media=None
+    ):
         self.media = media
 
         self.id = data.get('id')
@@ -54,21 +58,30 @@ class Content:
 
         self.trailer = (data.get('trailer') or {}).get('url')
 
-    def update_bookmarks(self, folders):
+    def update_bookmarks(
+        self,
+        folders
+    ):
         self.bookmarks = [i.id for i in folders]
 
-    def rating_color(self):
+    def rating_color(
+        self
+    ):
         try:
             rating = float(self.rating)
         except (TypeError, ValueError):
             return 'msx-yellow'
+
         if rating >= 7:
             return 'msx-green'
         if rating >= 5:
             return 'msx-yellow'
         return 'msx-red'
 
-    def to_msx(self, device_settings=None):
+    def to_msx(
+        self,
+        device_settings=None
+    ):
         entry = {
             'title': self.title,
             'image': self.poster.get(device_settings),
@@ -124,13 +137,17 @@ class Content:
                 params={'content_id': self.id},
                 module='panel'
             )
+
         return None
 
-    def to_subscription_button(self):
+    def to_subscription_button(
+        self
+    ):
         if self.subscribed:
             label = '{ico:msx-yellow:new-releases}'
         else:
             label = '{ico:msx-white:new-releases}'
+
         return {
             'id': SUBSCRIPTION_BUTTON_ID,
             'type': 'button',
@@ -143,11 +160,14 @@ class Content:
             )
         }
 
-    def to_bookmark_button(self):
+    def to_bookmark_button(
+        self
+    ):
         if self.in_bookmarks():
             label = '{ico:msx-yellow:bookmark}'
         else:
             label = '{ico:msx-white:bookmark}'
+
         return {
             'id': BOOKMARK_BUTTON_ID,
             'type': 'button',
@@ -168,6 +188,7 @@ class Content:
     ):
         props = {'trigger:background': 'player:button:eject:execute'}
         props.update(msx.DEFAULT_PLAY_BUTTON_PROPS)
+
         return {
             'id': TRAILER_BUTTON_ID,
             'type': 'button',
@@ -279,7 +300,9 @@ class Content:
             ]
         }
 
-    def to_seasons_msx_panel(self):
+    def to_seasons_msx_panel(
+        self
+    ):
         return {
             'type': 'list',
             'headline': self.title,
@@ -336,6 +359,7 @@ class Content:
         alternative_player: bool = False
     ):
         season = next(s for s in self.seasons if s.n == season_number)
+
         return {
             'type': 'list',
             'headline': f'{self.title} [S{season.n}]',
@@ -353,13 +377,21 @@ class Content:
             )
         }
 
-    def in_bookmarks(self):
+    def in_bookmarks(
+        self
+    ):
         return bool(self.bookmarks)
 
-    def to_bookmark_stamp(self, folder_id):
+    def to_bookmark_stamp(
+        self,
+        folder_id
+    ):
         return msx.stamp(folder_id in self.bookmarks)
 
-    def to_bookmarks_msx_panel(self, folders):
+    def to_bookmarks_msx_panel(
+        self,
+        folders
+    ):
         return {
             'type': 'list',
             'headline': 'Закладки',

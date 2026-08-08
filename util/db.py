@@ -23,7 +23,10 @@ migrations = sqlite_migrations.get_migrations()
 latest_version = len(migrations)
 for i in range(current_version, latest_version):
     connection.executescript(migrations[i])
-    logger.info('SQLite DB schema is updated to v%d', i + 1)
+    logger.info(
+        'SQLite DB schema is updated to v%d',
+        i + 1
+    )
 
 
 def to_device_dict(
@@ -31,6 +34,7 @@ def to_device_dict(
 ):
     if row is None:
         return None
+
     return {
         'id': row[0],
         'code': row[1],
@@ -172,6 +176,12 @@ def get_domain(
     row = cursor.fetchone()
 
     return None if row is None else row[0]
+
+
+def get_domains():
+    cursor = connection.execute('SELECT domain FROM domains')
+
+    return [row[0] for row in cursor.fetchall()]
 
 
 def add_domain(

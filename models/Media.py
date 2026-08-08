@@ -10,10 +10,14 @@ class Media:
         self.duration = data.get('duration')
         self.time = time
 
-    def to_subtitle(self):
+    def to_subtitle(
+        self
+    ):
         return f'[S{self.season}/E{self.n}] {self.title}'
 
-    def progress(self):
+    def progress(
+        self
+    ):
         if not self.time or not self.duration or self.time >= self.duration:
             return None
         return round(100 * self.time / self.duration)

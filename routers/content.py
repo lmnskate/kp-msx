@@ -14,21 +14,29 @@ router = APIRouter(
 )
 
 
-def _page(request: Request) -> int:
+def _page(
+    request: Request
+) -> int:
     return int(request.query_params.get('page') or 1)
 
 
-async def _get_content(device, request: Request):
+async def _get_content(
+    device,
+    request: Request
+):
     return await device.kp.get_single_content(
         request.query_params.get('content_id')
     )
 
 
-async def _ensure_bookmark_folders(kp):
+async def _ensure_bookmark_folders(
+    kp
+):
     folders = await kp.get_bookmark_folders()
     if len(folders) == 0:
         await kp.create_bookmark_folder()
         folders = await kp.get_bookmark_folders()
+
     return folders
 
 
@@ -80,6 +88,7 @@ async def category(
         country=country,
         sort=sort
     )
+
     return msx.content_list(
         result,
         category=cat,
@@ -96,7 +105,11 @@ async def genres(
     device = request.state.device
     cat = request.query_params.get('category')
     result = await device.kp.get_genres(category=cat)
-    return msx.genre_folders(cat, result)
+
+    return msx.genre_folders(
+        cat,
+        result
+    )
 
 
 @router.get('/bookmarks')
@@ -105,6 +118,7 @@ async def bookmarks(
 ):
     device = request.state.device
     result = await _ensure_bookmark_folders(device.kp)
+
     return msx.bookmark_folders(result)
 
 
@@ -114,6 +128,7 @@ async def tv(
 ):
     device = request.state.device
     result = await device.kp.get_tv()
+
     return msx.tv_channels(
         result,
         alternative_player=device.settings.alternative_player
@@ -127,7 +142,11 @@ async def folder(
     device = request.state.device
     page = _page(request)
     folder_id = request.query_params.get('folder')
-    result = await device.kp.get_bookmark_folder(folder_id, page=page)
+    result = await device.kp.get_bookmark_folder(
+        folder_id,
+        page=page
+    )
+
     return msx.content_list(
         result,
         page=page,
@@ -143,6 +162,7 @@ async def content_detail(
     result = await _get_content(device, request)
     if result is None:
         return msx.handle_exception()
+
     return result.to_msx_panel(
         proxy=device.settings.proxy,
         alternative_player=device.settings.alternative_player,
@@ -158,6 +178,7 @@ async def multivideo(
     result = await _get_content(device, request)
     if result is None:
         return msx.handle_exception()
+
     return result.to_multivideo_msx_panel(
         proxy=device.settings.proxy,
         alternative_player=device.settings.alternative_player
@@ -190,6 +211,7 @@ async def seasons(
     result = await _get_content(device, request)
     if result is None:
         return msx.handle_exception()
+
     return result.to_seasons_msx_panel()
 
 
@@ -201,6 +223,7 @@ async def episodes(
     result = await _get_content(device, request)
     if result is None:
         return msx.handle_exception()
+
     return result.to_episodes_msx_panel(
         int(request.query_params.get('season') or 1),
         proxy=device.settings.proxy,
@@ -215,6 +238,7 @@ async def search(
     device = request.state.device
     query = request.query_params.get('q')
     result = await device.kp.search(query)
+
     return msx.content_list(
         result,
         decompress=False,
@@ -229,6 +253,7 @@ async def history(
     device = request.state.device
     page = _page(request)
     result = await device.kp.get_history(page=page)
+
     return msx.content_list(
         result,
         page=page,
@@ -242,6 +267,7 @@ async def watching(
 ):
     device = request.state.device
     result = await device.kp.get_watching(subscribed=1)
+
     return msx.content_list(
         result,
         device_settings=device.settings
@@ -255,6 +281,7 @@ async def collections(
     device = request.state.device
     page = request.query_params.get('page')
     result = await device.kp.get_collections(page=page)
+
     return msx.collections(
         result,
         device_settings=device.settings
@@ -268,6 +295,7 @@ async def single_collection(
     device = request.state.device
     collection_id = request.query_params.get('collection_id')
     result = await device.kp.get_single_collection(collection_id)
+
     return msx.content_list(
         result,
         device_settings=device.settings
@@ -282,7 +310,11 @@ async def similar(
     result = await device.kp.get_similar(
         request.query_params.get('content_id')
     )
-    return msx.content_list(result, device_settings=device.settings)
+
+    return msx.content_list(
+        result,
+        device_settings=device.settings
+    )
 
 
 @router.get('/unfinished')
@@ -292,6 +324,7 @@ async def unfinished(
     device = request.state.device
     movies = await device.kp.get_watching_movies()
     serials = await device.kp.get_watching(subscribed=0)
+
     return msx.content_list(
         movies + serials,
         device_settings=device.settings
@@ -304,6 +337,7 @@ async def countries(
 ):
     device = request.state.device
     result = await device.kp.get_countries()
+
     return msx.country_list(
         request.query_params.get('category'),
         result
@@ -318,6 +352,7 @@ async def clear_history(
     await device.kp.clear_history_item(
         request.query_params.get('content_id')
     )
+
     return msx.empty_response()
 
 
@@ -365,6 +400,7 @@ async def toggle_subscription(
     result = await _get_content(device, request)
     if result is None:
         return msx.empty_response()
+
     return msx.update_panel(
         SUBSCRIPTION_BUTTON_ID,
         result.to_subscription_button()
@@ -379,7 +415,10 @@ async def toggle_bookmark(
     content_id = request.query_params.get('content_id')
     folder_id = int(request.query_params.get('folder_id') or 0)
 
-    await device.kp.toggle_bookmark(content_id, folder_id)
+    await device.kp.toggle_bookmark(
+        content_id,
+        folder_id
+    )
     result = await _get_content(device, request)
     if result is None:
         return msx.empty_response()
