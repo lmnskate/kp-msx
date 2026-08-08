@@ -12,8 +12,22 @@ HDR_SETTING = 'supportHdr'
 MIXED_PLAYLIST_SETTING = 'mixedPlaylist'
 SERVER_LOCATION_SETTING = 'serverLocation'
 
-# File with all CDN domains seen by the server (for domain-based routing)
+# File with all CDN domains seen by the server (for domain-based routing);
+# contains registrable domains only (second-level + TLD)
 CDN_DOMAINS_FILE = 'cdn-domains.txt'
+
+# Compound public suffixes accounted for when reducing hostnames to
+# registrable domains for CDN_DOMAINS_FILE (not an exhaustive PSL)
+COMPOUND_TLDS = frozenset([
+    'ac.uk', 'co.uk', 'gov.uk', 'org.uk',
+    'co.jp', 'or.jp',
+    'co.kr', 'or.kr',
+    'co.nz', 'org.nz',
+    'com.au', 'net.au', 'org.au',
+    'com.br', 'com.cn', 'net.cn', 'org.cn',
+    'com.mx', 'com.ru', 'net.ru', 'org.ru', 'pp.ru',
+    'com.sg', 'com.tr', 'co.in'
+])
 
 # MSX text icons
 LENNY = '¯\\_(ツ)_/¯'

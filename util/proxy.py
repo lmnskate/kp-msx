@@ -86,13 +86,35 @@ def remember_url(
         remember_domain(urlparse(url).netloc)
 
 
+def registrable_domain(
+    domain
+):
+    """Reduce a hostname to its registrable domain (second-level + TLD),
+    e.g. 'cdn1.example.com' -> 'example.com'. Common compound suffixes
+    ('co.uk' etc.) are taken into account; IPs and already-short hostnames
+    pass through unchanged."""
+    host = domain.split(':')[0]
+    labels = host.split('.')
+    if len(labels) <= 2 or labels[-1].isdigit():
+        return host
+
+    suffix = '.'.join(labels[-2:])
+    if suffix in g.COMPOUND_TLDS:
+        return '.'.join(labels[-3:])
+
+    return suffix
+
+
 def dump_domains_file():
     try:
         with open(
             g.CDN_DOMAINS_FILE,
             'w'
         ) as f:
-            for domain in sorted(db.get_domains()):
+            domains = {
+                registrable_domain(domain) for domain in db.get_domains()
+            }
+            for domain in sorted(domains):
                 f.write(domain + '\n')
     except OSError:
         logger.warning(
