@@ -279,11 +279,12 @@ async def collections(
     request: Request
 ):
     device = request.state.device
-    page = request.query_params.get('page')
+    page = _page(request)
     result = await device.kp.get_collections(page=page)
 
     return msx.collections(
         result,
+        page=page,
         device_settings=device.settings
     )
 

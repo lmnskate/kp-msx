@@ -114,6 +114,18 @@ def build_list(
     }
 
 
+def empty_item():
+    return {
+        'type': 'default',
+        'layout': '0,0,12,1',
+        'color': 'msx-glass',
+        'alignment': 'center',
+        'label': SAD_LENNY,
+        'titleFooter': 'Здесь пока ничего нет',
+        'action': '[]'
+    }
+
+
 def update_panel(
     content_id,
     value

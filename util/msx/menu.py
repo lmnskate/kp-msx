@@ -1,5 +1,5 @@
-from util.msx.core import (POSTER_TEMPLATE, build_list, format_action, icon,
-                           sad_screen)
+from util.msx.core import (POSTER_TEMPLATE, build_list, empty_item,
+                           format_action, icon, sad_screen)
 from util.msx.player import player_action_btn
 from util.msx.settings import settings_screen
 
@@ -7,7 +7,7 @@ from util.msx.settings import settings_screen
 def start():
     return {
         'name': 'Kinopub',
-        'version': '2.2.1',
+        'version': '2.2.2',
         'parameter': format_action('/msx/menu', module='menu'),
         'welcome': 'none',
         'launcher': {
@@ -70,9 +70,16 @@ def content_list(
     if decompress is not None:
         extra['decompress'] = decompress
 
+    items = [
+        entry.to_msx(device_settings=device_settings)
+        for entry in entries
+    ]
+    if not items and page == 1:
+        items = [empty_item()]
+
     resp = build_list(
         '0,0,2,4',
-        [entry.to_msx(device_settings=device_settings) for entry in entries],
+        items,
         template_extra=extra,
         preload='next'
     )
@@ -92,11 +99,19 @@ def content_list(
 def collections(
     entries,
     *,
+    page=1,
     device_settings=None
 ):
+    items = [
+        entry.to_msx(device_settings=device_settings)
+        for entry in entries
+    ]
+    if not items and page == 1:
+        items = [empty_item()]
+
     return build_list(
         '0,0,3,6',
-        [entry.to_msx(device_settings=device_settings) for entry in entries],
+        items,
         template_extra={**POSTER_TEMPLATE, 'imageOverlay': 3},
         preload='next'
     )
@@ -107,7 +122,7 @@ def bookmark_folders(
 ):
     return build_list(
         '0,0,4,1',
-        [i.to_msx() for i in result],
+        [i.to_msx() for i in result] or [empty_item()],
         headline='Закладки'
     )
 
@@ -118,7 +133,7 @@ def genre_folders(
 ):
     return build_list(
         '0,0,4,1',
-        [i.to_msx(category) for i in result],
+        [i.to_msx(category) for i in result] or [empty_item()],
         headline='Жанры'
     )
 
@@ -129,7 +144,7 @@ def country_list(
 ):
     return build_list(
         '0,0,4,1',
-        [i.to_msx(category) for i in result],
+        [i.to_msx(category) for i in result] or [empty_item()],
         headline='Страны'
     )
 
@@ -169,5 +184,5 @@ def tv_channels(
         'items': [
             channel.to_msx(alternative_player=alternative_player)
             for channel in channels
-        ]
+        ] or [empty_item()]
     }

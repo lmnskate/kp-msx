@@ -151,6 +151,18 @@ class KinoPub:
 
         return [model(i) for i in result[key]]
 
+    @staticmethod
+    def _page_out_of_range(
+        result,
+        page
+    ):
+        # KinoPub clamps out-of-range pages to the last one instead of
+        # returning an empty list, which makes MSX paging loop forever
+        try:
+            return page > result['pagination']['current']
+        except (KeyError, TypeError):
+            return False
+
     async def get_content_categories(
         self
     ):
@@ -191,12 +203,14 @@ class KinoPub:
         if sort:
             params['sort'] = sort
 
-        return await self.fetch_list(
+        result = await self.api(
             path,
-            Content,
-            params=params,
-            default=[]
+            params=params
         )
+        if result is None or self._page_out_of_range(result, page):
+            return []
+
+        return [Content(i) for i in result['items']]
 
     async def search(
         self,
@@ -259,15 +273,8 @@ class KinoPub:
             f'/bookmarks/{folder_id}',
             {'page': page}
         )
-        if result is None:
+        if result is None or self._page_out_of_range(result, page):
             return []
-
-        try:
-            current_page = result['pagination']['current']
-            if page > current_page:
-                return []
-        except (KeyError, TypeError):
-            pass
 
         return [Content(i) for i in result['items']]
 
@@ -279,7 +286,7 @@ class KinoPub:
             '/history',
             {'page': page}
         )
-        if result is None:
+        if result is None or self._page_out_of_range(result, page):
             return []
 
         return [
@@ -353,14 +360,16 @@ class KinoPub:
 
     async def get_collections(
         self,
-        page
+        page=1
     ):
-        return await self.fetch_list(
+        result = await self.api(
             '/collections',
-            Collection,
-            params={'page': page},
-            default=[]
+            {'page': page}
         )
+        if result is None or self._page_out_of_range(result, page):
+            return []
+
+        return [Collection(i) for i in result['items']]
 
     async def get_single_collection(
         self,
