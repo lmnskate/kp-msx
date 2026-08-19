@@ -7,7 +7,7 @@ from starlette.requests import Request
 from config.globals import SUBSCRIPTION_BUTTON_ID
 from models.Content import Content
 from util import msx
-from util.proxy import extract_audio_tracks
+from util.proxy import extract_audio_tracks, merge_audio_track_names
 
 logger = logging.getLogger(__name__)
 
@@ -191,19 +191,33 @@ async def multivideo(
 
     audio_tracks_by_index = {}
     if result.videos:
-        tasks = [
+        indexed_tasks = [
             (index, extract_audio_tracks(video.video_url))
             for index, video in enumerate(result.videos)
             if video.video_url
         ]
-        if tasks:
+        if indexed_tasks:
             results = await asyncio.gather(
-                *[task for _, task in tasks],
+                *[task for _, task in indexed_tasks],
                 return_exceptions=True
             )
-            for (index, _), tracks in zip(tasks, results):
-                if isinstance(tracks, list) and tracks:
+
+            # Keep the original video order for the merge
+            tracks_by_video = [
+                tracks if isinstance(tracks, list) else []
+                for _, tracks in results
+            ]
+            merged = merge_audio_track_names(tracks_by_video)
+
+            for (index, _), tracks in zip(indexed_tasks, merged):
+                if tracks:
                     audio_tracks_by_index[index] = tracks
+                    logger.debug(
+                        'Audio tracks for video %s (%s): %s',
+                        index,
+                        result.videos[index].title,
+                        [t.get('name') for t in tracks]
+                    )
 
     return result.to_multivideo_msx_panel(
         proxy=device.settings.proxy,
