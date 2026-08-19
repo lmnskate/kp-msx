@@ -1,7 +1,7 @@
 from urllib.parse import urlencode
 
 from config.settings import server
-from util.msx.core import format_action, icon
+from util.msx.core import format_action
 
 
 def already_registered():

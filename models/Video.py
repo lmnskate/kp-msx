@@ -19,7 +19,8 @@ class Video(Playable):
     def to_multivideo_entry(
         self,
         proxy: bool = False,
-        alternative_player: bool = False
+        alternative_player: bool = False,
+        device_settings=None
     ):
         return {
             'label': self.title,

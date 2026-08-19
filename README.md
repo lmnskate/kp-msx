@@ -6,6 +6,18 @@ This is a small server that sits between your TV and the KinoPub API — useful 
 
 Fork of [slonopot/kp-msx](https://github.com/slonopot/kp-msx) with SQLite instead of MongoDB and other improvements.
 
+## Security notes
+
+- **The `id` query parameter is your device credential.** Anyone who knows a
+  device id can browse the KinoPub account linked to it, change bookmarks,
+  history, and settings. Keep URLs containing `id=...` private, do not share
+  them in public logs, and avoid logging full query strings on the server.
+- **`/msx/proxy` and `/msx/subtitle` are unauthenticated allowlist relays.**
+  They only fetch domains previously seen while browsing KinoPub, but anyone
+  who can reach your server can fetch arbitrary paths on those domains through
+  it (on your bandwidth). If that matters to you, restrict access at the
+  reverse proxy/firewall level.
+
 ## Setup
 
 Python 3.12+ required. No external database needed — SQLite is created automatically.

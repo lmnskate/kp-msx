@@ -1,6 +1,9 @@
 import logging
+import os
+import posixpath
 import re
-from urllib.parse import unquote, urlencode, urlparse
+import tempfile
+from urllib.parse import unquote, urlencode, urljoin, urlparse
 
 import aiohttp
 
@@ -14,18 +17,35 @@ HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36'
 }
 
+CLIENT_TIMEOUT = aiohttp.ClientTimeout(
+    connect=5,
+    total=None,
+    sock_read=30
+)
+
 KNOWN_DOMAINS: set[str] = set()
 
 SESSION: aiohttp.ClientSession | None = None
 
+NEW_DOMAINS_SINCE_DUMP = 0
+DOMAINS_DUMP_INTERVAL = 10
+
+
+class UnknownDomainError(Exception):
+    pass
+
+
+async def init_session() -> None:
+    global SESSION
+    SESSION = aiohttp.ClientSession(
+        headers=HEADERS,
+        timeout=CLIENT_TIMEOUT
+    )
+
 
 async def get_session() -> aiohttp.ClientSession:
-    global SESSION
     if SESSION is None or SESSION.closed:
-        SESSION = aiohttp.ClientSession(
-            headers=HEADERS,
-            timeout=aiohttp.ClientTimeout(total=5)
-        )
+        await init_session()
 
     return SESSION
 
@@ -71,12 +91,15 @@ def domain_exists(
 def remember_domain(
     domain
 ):
+    global NEW_DOMAINS_SINCE_DUMP
+
     if not domain or domain_exists(domain):
         return
 
     db.add_domain(domain)
     KNOWN_DOMAINS.add(domain)
-    dump_domains_file()
+    NEW_DOMAINS_SINCE_DUMP += 1
+    maybe_dump_domains_file()
 
 
 def remember_url(
@@ -93,7 +116,7 @@ def registrable_domain(
     e.g. 'cdn1.example.com' -> 'example.com'. Common compound suffixes
     ('co.uk' etc.) are taken into account; IPs and already-short hostnames
     pass through unchanged."""
-    host = domain.split(':')[0]
+    host = domain.split('@')[-1].split(':')[0]
     labels = host.split('.')
     if len(labels) <= 2 or labels[-1].isdigit():
         return host
@@ -107,23 +130,44 @@ def registrable_domain(
 
 def dump_domains_file():
     try:
-        with open(
-            g.CDN_DOMAINS_FILE,
-            'w'
-        ) as f:
-            domains = {
-                registrable_domain(domain) for domain in db.get_domains()
-            }
-            for domain in sorted(domains):
-                f.write(domain + '\n')
+        domains = {
+            registrable_domain(domain) for domain in db.get_domains()
+        }
+        path = g.CDN_DOMAINS_FILE
+        directory = os.path.dirname(path) or '.'
+        os.makedirs(directory, exist_ok=True)
+
+        fd, tmp_path = tempfile.mkstemp(
+            dir=directory,
+            prefix='.cdn-domains-'
+        )
+        try:
+            with os.fdopen(fd, 'w') as f:
+                for domain in sorted(domains):
+                    f.write(domain + '\n')
+            os.replace(tmp_path, path)
+        except Exception:
+            os.unlink(tmp_path)
+            raise
     except OSError:
         logger.warning(
             'Failed to write %s',
             g.CDN_DOMAINS_FILE
         )
 
+
+def maybe_dump_domains_file(
+    force=False
+):
+    global NEW_DOMAINS_SINCE_DUMP
+
+    if force or NEW_DOMAINS_SINCE_DUMP >= DOMAINS_DUMP_INTERVAL:
+        NEW_DOMAINS_SINCE_DUMP = 0
+        dump_domains_file()
+
+
 # Bootstrap the domains file from the DB collected by previous runs
-dump_domains_file()
+maybe_dump_domains_file(force=True)
 
 
 def check_url(
@@ -131,7 +175,7 @@ def check_url(
 ):
     domain = urlparse(url).netloc
     if not domain_exists(domain):
-        raise Exception('Unknown domain')
+        raise UnknownDomainError('Unknown domain')
 
     return True
 
@@ -141,24 +185,46 @@ def rewrite_domain(
     content: str
 ) -> str:
     domain_info = urlparse(url)
-    prefix = f'{domain_info.scheme}://{domain_info.netloc}'
+    base_url = f'{domain_info.scheme}://{domain_info.netloc}'
+    if domain_info.path:
+        base_url = urljoin(
+            base_url + '/',
+            posixpath.dirname(domain_info.path) + '/'
+        )
 
-    def replace_match(
-        x: re.Match
+    def _rewrite_url(
+        ref: str
     ):
-        a, b, c = x.groups()
-        r = f'{server.base_url}/msx/proxy?' + urlencode({'url': f'{prefix}/{b}'})
+        if ref.startswith(server.base_url):
+            return ref
 
-        return a + r + c
+        if ref.startswith(('http://', 'https://')):
+            return make_proxy_url(ref)
 
-    content = re.sub(
-        '(^|URI=")/(.*?)($|")',
-        replace_match,
-        content,
-        flags=re.MULTILINE
-    )
+        resolved = urljoin(base_url, ref)
 
-    return content
+        return make_proxy_url(resolved)
+
+    def _rewrite_line(
+        line: str
+    ):
+        if not line:
+            return line
+
+        if line.startswith('#'):
+            return re.sub(
+                r'URI="([^"]*)"',
+                lambda m: f'URI="{_rewrite_url(m.group(1))}"',
+                line
+            )
+
+        stripped = line.strip()
+        if not stripped:
+            return line
+
+        return _rewrite_url(stripped)
+
+    return '\n'.join(_rewrite_line(line) for line in content.splitlines()) + '\n'
 
 
 def filter_audio_track(
@@ -199,31 +265,50 @@ def filter_audio_track(
 
 async def get(
     url,
-    audio_name=None
+    audio_name=None,
+    client_headers=None
 ):
+    request_headers = {}
+    if client_headers and 'Range' in client_headers:
+        request_headers['Range'] = client_headers['Range']
+
     session = await get_session()
-    async with session.get(url) as response:
+    response = await session.get(url, headers=request_headers)
+
+    content_type = response.headers.get('content-type')
+    response_headers = {}
+    for header in ('Content-Range', 'Accept-Ranges'):
+        if header in response.headers:
+            response_headers[header] = response.headers[header]
+
+    is_text_playlist = ((
+        content_type is not None and 'mpegurl' in content_type.lower()
+    ) or urlparse(url).path.lower().split('?')[0].endswith('.m3u8'))
+
+    if is_text_playlist:
         content = await response.read()
-        content_type = response.headers.get('content-type')
-
-        is_text_playlist = ((
-            content_type is not None and 'mpegurl' in content_type.lower()
-        ) or url.lower().endswith('.m3u8'))
-
-        if is_text_playlist:
-            text_content = content.decode('utf-8')
-            text_content = rewrite_domain(
-                url,
-                text_content
+        await response.release()
+        text_content = content.decode('utf-8')
+        text_content = rewrite_domain(
+            url,
+            text_content
+        )
+        if audio_name:
+            text_content = filter_audio_track(
+                text_content,
+                audio_name
             )
-            if audio_name:
-                text_content = filter_audio_track(
-                    text_content,
-                    audio_name
-                )
-            content = text_content.encode('utf-8')
 
-        return response.status, content_type, content
+        return response.status, content_type, response_headers, text_content.encode('utf-8')
+
+    async def _chunks():
+        try:
+            async for chunk in response.content.iter_any():
+                yield chunk
+        finally:
+            await response.release()
+
+    return response.status, content_type, response_headers, _chunks()
 
 
 def srt_to_vtt(
@@ -251,5 +336,8 @@ async def get_subtitle(
     session = await get_session()
     async with session.get(url) as response:
         content = await response.read()
+
+        if response.status != 200:
+            return response.status, response.headers.get('content-type'), content
 
         return response.status, 'text/vtt', srt_to_vtt(content)

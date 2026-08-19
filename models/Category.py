@@ -1,4 +1,3 @@
-from config.settings import server
 from util import msx
 
 
@@ -21,7 +20,7 @@ class Category:
             'icon': 'new',
             'path': '/msx/category',
             'params': {'sort': 'created-', 'page': '{PAGE}'},
-            'interaction': f'{server.base_url}/paging.html'
+            'interaction': '/paging.html'
         },
         lambda: {
             'id': 'toons',
@@ -29,7 +28,7 @@ class Category:
             'icon': 'cartoon',
             'path': '/msx/category',
             'params': {'genre': '23', 'page': '{PAGE}'},
-            'interaction': f'{server.base_url}/paging.html'
+            'interaction': '/paging.html'
         },
         lambda: {
             'id': 'collections',
@@ -37,7 +36,7 @@ class Category:
             'icon': 'collections',
             'path': '/msx/collections',
             'params': {'page': '{PAGE}'},
-            'interaction': f'{server.base_url}/paging.html'
+            'interaction': '/paging.html'
         },
         lambda: {
             'id': 'sport',
@@ -66,7 +65,7 @@ class Category:
             'icon': 'history',
             'path': '/msx/history',
             'params': {'page': '{PAGE}'},
-            'interaction': f'{server.base_url}/paging.html'
+            'interaction': '/paging.html'
         },
         lambda: {
             'id': 'settings',
@@ -95,7 +94,7 @@ class Category:
         if self.path is None:
             self.path = '/msx/category'
             self.params = {'category': self.id, 'page': '{PAGE}'}
-            self.interaction = f'{server.base_url}/paging.html'
+            self.interaction = '/paging.html'
         else:
             self.params = data.get('params', {})
             self.interaction = data.get('interaction')

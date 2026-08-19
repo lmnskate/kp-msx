@@ -4,7 +4,7 @@ from fastapi import APIRouter
 from starlette.requests import Request
 
 from config.globals import SUBSCRIPTION_BUTTON_ID
-from models.Category import Category
+from models.Content import Content
 from util import msx
 
 logger = logging.getLogger(__name__)
@@ -14,10 +14,31 @@ router = APIRouter(
 )
 
 
+def _int_param(
+    request: Request,
+    name: str,
+    default: int = 0
+) -> int:
+    value = request.query_params.get(name)
+    if value is None:
+        return default
+
+    try:
+        return int(value)
+    except ValueError:
+        logger.warning(
+            'Invalid %s query parameter: %r',
+            name,
+            value
+        )
+
+        return default
+
+
 def _page(
     request: Request
 ) -> int:
-    return int(request.query_params.get('page') or 1)
+    return _int_param(request, 'page', 1)
 
 
 async def _get_content(
@@ -49,20 +70,7 @@ async def menu(
     if not device.registered():
         return msx.unregistered_menu()
 
-    try:
-        categories = await device.kp.get_content_categories()
-    except Exception:
-        logger.exception('Failed to load content categories')
-        return msx.handle_exception()
-
-    if categories is None:
-        device.delete()
-        return msx.unregistered_menu()
-
-    categories += Category.static_categories()
-    for category in categories:
-        if category.id in device.settings.menu_blacklist:
-            category.blacklisted = True
+    categories = await msx.build_categories(device)
 
     return msx.registered_menu(categories)
 
@@ -181,7 +189,8 @@ async def multivideo(
 
     return result.to_multivideo_msx_panel(
         proxy=device.settings.proxy,
-        alternative_player=device.settings.alternative_player
+        alternative_player=device.settings.alternative_player,
+        device_settings=device.settings
     )
 
 
@@ -192,10 +201,8 @@ async def content_bookmarks(
     device = request.state.device
     content_id = request.query_params.get('content_id')
 
-    result = await _get_content(device, request)
-    if result is None:
-        return msx.handle_exception()
     content_folders = await device.kp.get_content_folders(content_id)
+    result = Content({'id': content_id})
     result.update_bookmarks(content_folders)
 
     folders = await _ensure_bookmark_folders(device.kp)
@@ -212,7 +219,9 @@ async def seasons(
     if result is None:
         return msx.handle_exception()
 
-    return result.to_seasons_msx_panel()
+    return result.to_seasons_msx_panel(
+        device_settings=device.settings
+    )
 
 
 @router.get('/episodes')
@@ -225,9 +234,10 @@ async def episodes(
         return msx.handle_exception()
 
     return result.to_episodes_msx_panel(
-        int(request.query_params.get('season') or 1),
+        _int_param(request, 'season', 1),
         proxy=device.settings.proxy,
-        alternative_player=device.settings.alternative_player
+        alternative_player=device.settings.alternative_player,
+        device_settings=device.settings
     )
 
 
@@ -370,17 +380,20 @@ async def play(
     if result is None:
         return msx.empty_response()
 
-    if season is not None and episode is not None:
+    season = _int_param(request, 'season', 0)
+    episode = _int_param(request, 'episode', 0)
+
+    if season > 0 and episode > 0:
         for s in result.seasons or []:
-            if s.n != int(season):
+            if s.n != season:
                 continue
             for ep in s.episodes:
-                if ep.n == int(episode):
+                if ep.n == episode:
                     if not ep.watched:
                         await device.kp.toggle_watched(
                             content_id,
-                            season,
-                            episode
+                            str(season),
+                            str(episode)
                         )
                     break
             break
@@ -414,16 +427,14 @@ async def toggle_bookmark(
 ):
     device = request.state.device
     content_id = request.query_params.get('content_id')
-    folder_id = int(request.query_params.get('folder_id') or 0)
+    folder_id = _int_param(request, 'folder_id', 0)
 
     await device.kp.toggle_bookmark(
         content_id,
         folder_id
     )
-    result = await _get_content(device, request)
-    if result is None:
-        return msx.empty_response()
     content_folders = await device.kp.get_content_folders(content_id)
+    result = Content({'id': content_id})
     result.update_bookmarks(content_folders)
 
     return msx.update_panel(

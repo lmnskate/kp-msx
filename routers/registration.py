@@ -61,7 +61,7 @@ async def check_registration(
     if result is None:
         return msx.code_not_entered()
 
-    request.state.device.update_tokens(
+    await request.state.device.update_tokens(
         result['access_token'],
         result['refresh_token']
     )

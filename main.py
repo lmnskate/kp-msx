@@ -23,15 +23,19 @@ logger = logging.getLogger(__name__)
 async def lifespan(
     app
 ):
-    yield
-    await proxy_util.close_session()
+    await proxy_util.get_session()
+    try:
+        yield
+    finally:
+        proxy_util.maybe_dump_domains_file(force=True)
+        await proxy_util.close_session()
 
 
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=['*'],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=['*'],
     allow_headers=['*']
 )
@@ -75,11 +79,16 @@ UNAUTHORIZED_PATHS = frozenset([
 ])
 
 
+REGISTRATION_PATHS = frozenset([
+    '/msx/registration',
+    '/msx/check_registration'
+])
+
+
 def cors_json_response(
     data
 ):
     response = JSONResponse(data)
-    response.headers['Access-Control-Allow-Credentials'] = 'true'
     response.headers['Access-Control-Allow-Origin'] = '*'
 
     return response
@@ -92,11 +101,19 @@ async def execute_guarded(
 ):
     try:
         return await call_next(request)
-    except ExceptionGroup:
-        logger.exception('Unhandled ExceptionGroup in %s', context)
+    except BaseExceptionGroup:
+        logger.exception(
+            'Unhandled BaseExceptionGroup in %s on %s',
+            context,
+            request.url.path
+        )
         return cors_json_response(msx.handle_exception())
     except Exception:
-        logger.exception('Unhandled error in %s', context)
+        logger.exception(
+            'Unhandled error in %s on %s',
+            context,
+            request.url.path
+        )
         return cors_json_response(msx.handle_exception())
 
 
@@ -129,9 +146,7 @@ async def auth(
     device_id = request.query_params.get('id')
 
     if (
-        device_id is None
-        and path not in UNAUTHORIZED_PATHS
-        and not path.startswith('/icons/')
+        device_id is None and path not in UNAUTHORIZED_PATHS and not path.startswith('/icons/')
     ):
         return cors_json_response({
             'response': {
@@ -141,23 +156,31 @@ async def auth(
         })
 
     if (
-        device_id == '{ID}'
-        and path not in UNAUTHORIZED_PATHS
-        and not path.startswith('/icons/')
+        device_id == '{ID}' and path not in UNAUTHORIZED_PATHS and not path.startswith('/icons/')
     ):
         return cors_json_response(msx.unsupported_version())
 
     request.state.device = None
+    transient = False
     if device_id is not None:
         request.state.device = Device.by_id(device_id)
         if request.state.device is None:
-            request.state.device = Device.create(device_id)
+            if path in REGISTRATION_PATHS:
+                request.state.device = Device.create(device_id)
+            else:
+                # Transient in-memory device: keeps the unregistered flow
+                # working without persisting rows for arbitrary ids.
+                request.state.device = Device({'id': device_id})
+                transient = True
 
     device = request.state.device
     if device is not None and device.user_agent is None:
         ua = request.headers.get('user-agent')
         if ua is not None:
-            device.update_user_agent(ua)
+            if transient:
+                device.user_agent = ua
+            else:
+                device.update_user_agent(ua)
 
     try:
         return await execute_guarded(
@@ -174,7 +197,7 @@ if __name__ == '__main__':
     uvicorn.run(
         app='main:app',
         host=server.bind_host,
-        port=server.bind_port or server.port,
+        port=server.bind_port if server.bind_port is not None else server.port,
         proxy_headers=server.proxy_headers,
         workers=server.workers
     )

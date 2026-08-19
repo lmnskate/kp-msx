@@ -27,7 +27,8 @@ class Device:
         self.refresh = data.get('refresh')
         self.kp = KinoPub(
             self.token,
-            self.refresh
+            self.refresh,
+            self.id
         )
         self.settings = DeviceSettings(data.get('settings'))
         self.user_agent = data.get('user_agent')
@@ -53,8 +54,9 @@ class Device:
         cls,
         device_id
     ):
-        entry = {'id': device_id}
-        db.create_device(entry)
+        entry = db.create_device({'id': device_id})
+        if entry is None:
+            entry = db.get_device_by_id(device_id)
 
         return cls(entry)
 
@@ -67,11 +69,14 @@ class Device:
             code
         )
 
-    def update_tokens(
+    async def update_tokens(
         self,
         token,
         refresh
     ):
+        if self.kp is not None:
+            await self.kp.close_session()
+
         db.update_device_tokens(
             self.id,
             token,
@@ -81,7 +86,8 @@ class Device:
         self.refresh = refresh
         self.kp = KinoPub(
             token,
-            refresh
+            refresh,
+            self.id
         )
 
     def update_settings(
@@ -110,13 +116,16 @@ class Device:
             attr, kp_setting = KP_TOGGLES[setting_id]
             value = not getattr(self.settings, attr)
             setattr(self.settings, attr, value)
-            device_info = await self.kp.get_current_device_info()
-            await self.kp.update_device_setting(
-                device_info.id,
-                kp_setting,
-                value
-            )
             self.update_settings()
+            # Best-effort sync to the KinoPub device settings; the local
+            # value is the source of truth even if the API call fails.
+            device_info = await self.kp.get_current_device_info()
+            if device_info is not None:
+                await self.kp.update_device_setting(
+                    device_info.id,
+                    kp_setting,
+                    value
+                )
 
             return attr
 
@@ -133,9 +142,14 @@ class Device:
 
     async def toggle_server(
         self
-    ) -> str:
+    ) -> 'str | None':
         device_info = await self.kp.get_current_device_info()
+        if device_info is None:
+            return None
+
         available_servers = await self.kp.get_available_servers()
+        if not available_servers:
+            return None
 
         new_server = available_servers[0]
         for i, server in enumerate(available_servers):

@@ -1,4 +1,5 @@
 kp-sqlite.db
+kp-sqlite.db.lock
 cdn-domains.txt
 nginx.conf
 AGENTS.md

@@ -1,5 +1,7 @@
+import fcntl
 import json
 import logging
+import os
 import sqlite3
 
 from config.settings import server
@@ -9,24 +11,69 @@ logger = logging.getLogger(__name__)
 
 connection = sqlite3.connect(
     server.sqlite_url,
-    autocommit=True
+    autocommit=True,
+    check_same_thread=False
 )
 
-connection.execute(
-    'CREATE TABLE IF NOT EXISTS migrations (id INT PRIMARY KEY, name TEXT)'
-)
-current_version = (
-    connection.execute('SELECT MAX(id) FROM migrations').fetchone()[0] or 0
-)
 
-migrations = sqlite_migrations.get_migrations()
-latest_version = len(migrations)
-for i in range(current_version, latest_version):
-    connection.executescript(migrations[i])
-    logger.info(
-        'SQLite DB schema is updated to v%d',
-        i + 1
+def _acquire_migrations_lock():
+    lock_path = f'{server.sqlite_url}.lock'
+    lock_dir = os.path.dirname(lock_path) or '.'
+    os.makedirs(lock_dir, exist_ok=True)
+    lock_file = open(lock_path, 'w')
+    fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+
+    return lock_file
+
+
+def _release_migrations_lock(
+    lock_file
+):
+    fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+    lock_file.close()
+
+
+def _run_migrations():
+    connection.execute(
+        'CREATE TABLE IF NOT EXISTS migrations (id INT PRIMARY KEY, name TEXT)'
     )
+    current_version = (
+        connection.execute('SELECT MAX(id) FROM migrations').fetchone()[0] or 0
+    )
+
+    migrations = sqlite_migrations.get_migrations()
+    latest_version = len(migrations)
+    if current_version >= latest_version:
+        return
+
+    lock_file = _acquire_migrations_lock()
+    try:
+        current_version = (
+            connection.execute('SELECT MAX(id) FROM migrations').fetchone()[0] or 0
+        )
+        for i in range(current_version, latest_version):
+            script = migrations[i]
+            try:
+                connection.executescript(script)
+                connection.execute(
+                    'INSERT OR IGNORE INTO migrations (id, name) VALUES (?1, ?2)',
+                    [i + 1, script[:80]]
+                )
+                logger.info(
+                    'SQLite DB schema is updated to v%d',
+                    i + 1
+                )
+            except Exception:
+                logger.exception(
+                    'SQLite migration %d failed',
+                    i + 1
+                )
+                raise
+    finally:
+        _release_migrations_lock(lock_file)
+
+
+_run_migrations()
 
 
 def to_device_dict(
@@ -77,7 +124,7 @@ def create_device(
     settings = entry.get('settings')
     return query_device(
         f"""
-        INSERT INTO devices ({DEVICE_COLUMNS})
+        INSERT OR IGNORE INTO devices ({DEVICE_COLUMNS})
         VALUES (?1, ?2, ?3, ?4, ?5, ?6)
         RETURNING {DEVICE_COLUMNS}
         """,
@@ -188,7 +235,7 @@ def add_domain(
     domain
 ):
     cursor = connection.execute(
-        'INSERT INTO domains (domain) VALUES (?1) RETURNING domain',
+        'INSERT OR IGNORE INTO domains (domain) VALUES (?1) RETURNING domain',
         [domain]
     )
     row = cursor.fetchone()

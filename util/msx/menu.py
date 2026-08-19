@@ -4,10 +4,26 @@ from util.msx.player import player_action_btn
 from util.msx.settings import settings_screen
 
 
+async def build_categories(
+    device
+):
+    # Local import: models.Category imports util.msx, a top-level import
+    # here would create a circular import.
+    from models.Category import Category
+
+    categories = await device.kp.get_content_categories()
+    categories += Category.static_categories()
+    for category in categories:
+        if category.id in device.settings.menu_blacklist:
+            category.blacklisted = True
+
+    return categories
+
+
 def start():
     return {
         'name': 'Kinopub',
-        'version': '2.2.2',
+        'version': '2.3.0',
         'parameter': format_action('/msx/menu', module='menu'),
         'welcome': 'none',
         'launcher': {

@@ -28,7 +28,8 @@ class Season:
     def to_episode_pages(
         self,
         proxy: bool = False,
-        alternative_player: bool = False
+        alternative_player: bool = False,
+        device_settings=None
     ):
         items = []
         for episode in self.episodes:

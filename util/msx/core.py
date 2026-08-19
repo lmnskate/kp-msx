@@ -27,10 +27,10 @@ def icon(
 
 def format_action(
     path: str,
-    params: dict = None,
-    interaction: str = None,
-    options: str = None,
-    module: str = None
+    params: dict | None = None,
+    interaction: str | None = None,
+    options: str | None = None,
+    module: str | None = None
 ):
     params = {**(params or {}), 'id': '{ID}'}
 

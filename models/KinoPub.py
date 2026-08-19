@@ -26,14 +26,18 @@ logger = logging.getLogger(__name__)
 
 
 class KinoPub:
+    _refresh_locks: dict[str, asyncio.Lock] = {}
+    _refresh_locks_lock = asyncio.Lock()
 
     def __init__(
         self,
         token,
-        refresh
+        refresh,
+        device_id=None
     ):
         self.token = token
         self.refresh = refresh
+        self.device_id = device_id
         self.session: aiohttp.ClientSession | None = None
 
     async def get_session(
@@ -438,12 +442,14 @@ class KinoPub:
 
     async def get_current_device_info(
         self
-    ) -> Device:
+    ) -> 'Device | None':
         from models.Device import Device
 
         data = await self.api('/device/info')
+        if data is None:
+            return None
 
-        return Device(data.get('device', {}))
+        return Device(data.get('device', {}) or {})
 
     async def update_device_setting(
         self,
@@ -502,39 +508,72 @@ class KinoPub:
             logger.warning('Failed to check device registration status: %s', e)
             return None
 
+    @classmethod
+    async def _get_refresh_lock(
+        cls,
+        device_id
+    ):
+        lock = cls._refresh_locks.get(device_id)
+        if lock is None:
+            async with cls._refresh_locks_lock:
+                lock = cls._refresh_locks.get(device_id)
+                if lock is None:
+                    lock = asyncio.Lock()
+                    cls._refresh_locks[device_id] = lock
+
+        return lock
+
     async def refresh_tokens(
         self
     ):
-        params = {
-            'grant_type': 'refresh_token',
-            'client_id': kp.client_id,
-            'client_secret': kp.client_secret,
-            'refresh_token': self.refresh
-        }
-        try:
-            async with aiohttp.ClientSession(timeout=g.TIMEOUT) as s:
-                response = await s.post(
-                    g.OAUTH_URL,
-                    params=params
-                )
-                result = await response.json()
-                if result.get('error') is not None:
-                    return False
+        if not self.device_id or not self.refresh:
+            return False
 
-                db.update_tokens(
-                    self.token,
-                    result['access_token'],
-                    result['refresh_token']
-                )
-                self.token = result['access_token']
-                self.refresh = result['refresh_token']
+        lock = await self._get_refresh_lock(self.device_id)
+        async with lock:
+            from models.Device import Device
 
+            device = Device.by_id(self.device_id)
+            if device is None:
+                return False
+
+            if device.token != self.token:
+                self.token = device.token
+                self.refresh = device.refresh
                 await self.close_session()
 
                 return True
-        except (aiohttp.ClientError, asyncio.TimeoutError, KeyError) as e:
-            logger.warning('Failed to refresh access token: %s', e)
-            return False
+
+            params = {
+                'grant_type': 'refresh_token',
+                'client_id': kp.client_id,
+                'client_secret': kp.client_secret,
+                'refresh_token': self.refresh
+            }
+            try:
+                async with aiohttp.ClientSession(timeout=g.TIMEOUT) as s:
+                    response = await s.post(
+                        g.OAUTH_URL,
+                        params=params
+                    )
+                    result = await response.json()
+                    if result.get('error') is not None:
+                        return False
+
+                    db.update_device_tokens(
+                        self.device_id,
+                        result['access_token'],
+                        result['refresh_token']
+                    )
+                    self.token = result['access_token']
+                    self.refresh = result['refresh_token']
+
+                    await self.close_session()
+
+                    return True
+            except (aiohttp.ClientError, asyncio.TimeoutError, KeyError) as e:
+                logger.warning('Failed to refresh access token: %s', e)
+                return False
 
     async def get_available_servers(
         self

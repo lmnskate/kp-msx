@@ -176,20 +176,28 @@ def poster_settings_panel(
 ):
     from models.Poster import Poster
 
+    if not posters:
+        return {
+            'type': 'list',
+            'headline': 'Нет постеров для отображения',
+            'items': []
+        }
+
     items = []
-    i = 0
 
     for size in Poster.SIZES:
         for poster_proxy in Poster.PROXIES:
             items.append({
                 'title': f'{size} / {poster_proxy["title"]}',
-                'image': posters[i].format(size, poster_proxy['id']),
+                'image': posters[len(items) % len(posters)].format(
+                    size,
+                    poster_proxy['id']
+                ),
                 'action': format_action(
                     f'/msx/settings/poster/set/{size}/{poster_proxy["id"]}',
                     module='execute'
                 )
             })
-            i += 1
 
     return {
         'type': 'list',

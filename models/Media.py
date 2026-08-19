@@ -1,3 +1,6 @@
+from models.Playable import _progress_pct
+
+
 class Media:
     def __init__(
         self,
@@ -18,6 +21,7 @@ class Media:
     def progress(
         self
     ):
-        if not self.time or not self.duration or self.time >= self.duration:
-            return None
-        return round(100 * self.time / self.duration)
+        return _progress_pct(
+            self.duration,
+            self.time
+        )

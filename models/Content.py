@@ -301,12 +301,13 @@ class Content:
         }
 
     def to_seasons_msx_panel(
-        self
+        self,
+        device_settings=None
     ):
         return {
             'type': 'list',
             'headline': self.title,
-            'background': self.poster.wide,
+            'background': self.poster.get_wide(device_settings),
             'template': {
                 'enumerate': False,
                 'type': 'button',
@@ -330,12 +331,13 @@ class Content:
     def to_multivideo_msx_panel(
         self,
         proxy: bool = False,
-        alternative_player: bool = False
+        alternative_player: bool = False,
+        device_settings=None
     ):
         return {
             'type': 'list',
             'headline': self.title,
-            'background': self.poster.wide,
+            'background': self.poster.get_wide(device_settings),
             'template': {
                 'enumerate': False,
                 'type': 'button',
@@ -346,7 +348,8 @@ class Content:
             'items': [
                 i.to_multivideo_entry(
                     proxy=proxy,
-                    alternative_player=alternative_player
+                    alternative_player=alternative_player,
+                    device_settings=device_settings
                 )
                 for i in self.videos
             ]
@@ -356,14 +359,27 @@ class Content:
         self,
         season_number,
         proxy: bool = False,
-        alternative_player: bool = False
+        alternative_player: bool = False,
+        device_settings=None
     ):
-        season = next(s for s in self.seasons if s.n == season_number)
+        season = next(
+            (s for s in self.seasons if s.n == season_number),
+            None
+        )
+
+        if season is None:
+            return {
+                'type': 'list',
+                'headline': self.title,
+                'items': [{
+                    'title': f'Сезон {season_number} не найден'
+                }]
+            }
 
         return {
             'type': 'list',
             'headline': f'{self.title} [S{season.n}]',
-            'background': self.poster.wide,
+            'background': self.poster.get_wide(device_settings),
             'template': {
                 'type': 'separate',
                 'layout': '0,0,4,3',
@@ -373,7 +389,8 @@ class Content:
             },
             'items': season.to_episode_pages(
                 proxy=proxy,
-                alternative_player=alternative_player
+                alternative_player=alternative_player,
+                device_settings=device_settings
             )
         }
 

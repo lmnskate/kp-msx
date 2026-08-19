@@ -8,9 +8,10 @@ from util.msx.core import (DEFAULT_PLAY_BUTTON_PROPS, POSTER_TEMPLATE,
                            build_list, empty_response, format_action,
                            handle_exception, icon, restart, sad_screen,
                            unsupported_version, update_panel)
-from util.msx.menu import (bookmark_folders, collections, content_list,
-                           country_list, genre_folders, registered_menu, start,
-                           tv_channels, unregistered_menu)
+from util.msx.menu import (bookmark_folders, build_categories, collections,
+                           content_list, country_list, genre_folders,
+                           registered_menu, start, tv_channels,
+                           unregistered_menu)
 from util.msx.player import play_action, player_action_btn
 from util.msx.registration import (already_registered, code_image,
                                    code_not_entered, registration)

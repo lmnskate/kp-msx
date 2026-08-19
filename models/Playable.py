@@ -4,6 +4,19 @@ from util import msx
 from util.proxy import make_proxy_url, make_subtitle_url, remember_url
 
 
+def _progress_pct(
+    duration,
+    watch_time,
+    watched=False
+):
+    if (
+        watched or not duration or not watch_time or watch_time >= duration
+    ):
+        return None
+
+    return round(100 * watch_time / duration)
+
+
 class Playable:
     def __init__(
         self,
@@ -22,14 +35,11 @@ class Playable:
     def progress(
         self
     ):
-        if (
+        return _progress_pct(
+            self.duration,
+            self.watch_time,
             self.watched
-            or not self.duration
-            or not self.watch_time
-            or self.watch_time >= self.duration
-        ):
-            return None
-        return round(100 * self.watch_time / self.duration)
+        )
 
     def footer(
         self
@@ -55,10 +65,13 @@ class Playable:
         if matches:
             best_file = matches[0]
         elif files:
-            best_file = sorted(files, key=lambda x: x.get('quality_id'))[-1]
+            best_file = sorted(
+                files,
+                key=lambda x: x.get('quality_id') or 0
+            )[-1]
 
         if best_file:
-            return best_file['url'][kp.protocol]
+            return best_file.get('url', {}).get(kp.protocol)
         return None
 
     def msx_action(

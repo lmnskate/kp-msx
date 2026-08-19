@@ -2,7 +2,6 @@ from fastapi import APIRouter
 from starlette.requests import Request
 
 from config.globals import SERVER_ID, SWITCH_IDS
-from models.Category import Category
 from models.Device import KP_TOGGLES, LOCAL_TOGGLES
 from util import msx
 
@@ -34,11 +33,7 @@ async def menu_entries(
 ):
     device = request.state.device
 
-    categories = await device.kp.get_content_categories()
-    categories += Category.static_categories()
-    for category in categories:
-        if category.id in device.settings.menu_blacklist:
-            category.blacklisted = True
+    categories = await msx.build_categories(device)
 
     return msx.menu_entries_settings_panel(categories)
 
@@ -84,6 +79,9 @@ async def toggle_setting(
 
     if setting in KP_TOGGLES or setting in LOCAL_TOGGLES:
         attr = await device.toggle(setting)
+        if attr is None:
+            return msx.empty_response()
+
         value = getattr(device.settings, attr)
 
         if setting in SWITCH_IDS:
@@ -99,6 +97,8 @@ async def toggle_setting(
 
     if setting == SERVER_ID:
         new_label = await device.toggle_server()
+        if new_label is None:
+            return msx.empty_response()
 
         return msx.update_panel(
             SERVER_ID,

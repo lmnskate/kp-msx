@@ -44,7 +44,12 @@ class Poster:
             poster_size = device_settings.poster_size
             poster_proxy = device_settings.poster_proxy
 
-        poster_url = getattr(self, poster_size, None) or self.big
+        poster_url = getattr(
+            self,
+            poster_size,
+            None
+        ) if poster_size else None
+        poster_url = poster_url or self.big
         url = self._proxy_by_id(poster_proxy)['template'].format(url=poster_url)
         remember_url(url)
 

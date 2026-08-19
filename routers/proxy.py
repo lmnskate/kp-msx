@@ -1,8 +1,10 @@
+import asyncio
 import logging
 
+import aiohttp
 from fastapi import APIRouter
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.responses import Response, StreamingResponse
 
 from util import msx, proxy
 
@@ -18,22 +20,44 @@ async def proxy_request(
     request: Request
 ):
     url = request.query_params.get('url')
+    if not url:
+        return Response(
+            status_code=400
+        )
+
     try:
         proxy.check_url(url)
-        code, content_type, contents = await proxy.get(
-            url,
-            audio_name=request.query_params.get('audio')
-        )
-    except Exception:
-        logger.warning('Proxy request failed: %s', url)
+    except proxy.UnknownDomainError:
+        logger.warning('Proxy request to unknown domain: %s', url)
         return Response(
             status_code=403
         )
 
-    return Response(
+    try:
+        code, content_type, response_headers, contents = await proxy.get(
+            url,
+            audio_name=request.query_params.get('audio'),
+            client_headers=request.headers
+        )
+    except (aiohttp.ClientError, asyncio.TimeoutError):
+        logger.warning('Proxy upstream request failed: %s', url)
+        return Response(
+            status_code=502
+        )
+
+    if isinstance(contents, bytes):
+        return Response(
+            contents,
+            code,
+            media_type=content_type,
+            headers=response_headers
+        )
+
+    return StreamingResponse(
         contents,
-        code,
-        media_type=content_type
+        status_code=code,
+        media_type=content_type,
+        headers=response_headers
     )
 
 
@@ -42,13 +66,25 @@ async def subtitle_request(
     request: Request
 ):
     url = request.query_params.get('url')
+    if not url:
+        return Response(
+            status_code=400
+        )
+
     try:
         proxy.check_url(url)
-        code, content_type, contents = await proxy.get_subtitle(url)
-    except Exception:
-        logger.warning('Subtitle request failed: %s', url)
+    except proxy.UnknownDomainError:
+        logger.warning('Subtitle request to unknown domain: %s', url)
         return Response(
             status_code=403
+        )
+
+    try:
+        code, content_type, contents = await proxy.get_subtitle(url)
+    except (aiohttp.ClientError, asyncio.TimeoutError):
+        logger.warning('Subtitle upstream request failed: %s', url)
+        return Response(
+            status_code=502
         )
 
     return Response(

@@ -146,10 +146,17 @@ function Html5XPlayer() {
     };
     var buildAudioSwitchUrl = function(name) {
         var audio = encodeURIComponent(name);
-        if (currentVideoUrl != null && currentVideoUrl.indexOf("/msx/proxy?") >= 0) {
-            return currentVideoUrl + "&audio=" + audio;
+        var replaceAudio = function(url, audioValue) {
+            var re = /([?&])audio=[^&]*/;
+            if (re.test(url)) {
+                return url.replace(re, '$1audio=' + audioValue);
+            }
+            return url + '&audio=' + audioValue;
+        };
+        if (currentVideoUrl != null && currentVideoUrl.indexOf('/msx/proxy?') >= 0) {
+            return replaceAudio(currentVideoUrl, audio);
         }
-        return "/msx/proxy?url=" + encodeURIComponent(currentVideoUrl) + "&audio=" + audio;
+        return '/msx/proxy?url=' + encodeURIComponent(currentVideoUrl) + '&audio=' + audio;
     };
     var switchManifestAudioTrack = function(name) {
         if (player == null || currentVideoUrl == null) {
