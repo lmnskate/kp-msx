@@ -23,10 +23,11 @@ class Video(Playable):
         device_settings=None
     ):
         return {
-            'label': self.title,
+            'title': self.title,
             'titleFooter': self.footer(),
             'progress': self.progress(),
             'image': self.thumbnail,
+            'playerLabel': self.content_title,
             'action': self.msx_action(
                 proxy=proxy,
                 alternative_player=alternative_player

@@ -340,10 +340,11 @@ class Content:
             'background': self.poster.get_wide(device_settings),
             'template': {
                 'enumerate': False,
-                'type': 'button',
-                'layout': '0,0,8,1',
-                'stampColor': 'msx-glass',
-                'playerLabel': self.title
+                'type': 'separate',
+                'layout': '0,0,4,3',
+                'color': 'msx-glass',
+                'imageFiller': 'height-center',
+                'title': 'Title'
             },
             'items': [
                 i.to_multivideo_entry(

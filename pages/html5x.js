@@ -310,6 +310,14 @@ function Html5XPlayer() {
         if (index >= 0 && track != null) {
             //KP-MSX patch: prefer the name from the HLS master playlist
             var manifestName = getManifestTrackName(manifestAudioTracks, track, true);
+            //Fallback: if the manifest order matches the native track order, use
+            //the manifest name at the same position (some platforms expose empty
+            //or generic track labels, so language matching alone is not enough)
+            if (manifestName == null &&
+                    index < manifestAudioTracks.length &&
+                    TVXTools.isFullStr(manifestAudioTracks[index].name)) {
+                manifestName = manifestAudioTracks[index].name;
+            }
             if (manifestName != null) {
                 return manifestName;
             }
