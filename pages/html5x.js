@@ -33,6 +33,10 @@ function Html5XPlayer() {
     //KP-MSX patch: track names from the HLS master playlist
     var manifestAudioTracks = [];
     var manifestSubtitleTracks = [];
+    //KP-MSX patch: audio track names supplied by the server for multi-video
+    //items. Authoritative fallback when the manifest or native labels are
+    //generic (e.g. "TRACK1").
+    var providedAudioTracks = [];
     //KP-MSX patch: server-side audio switching state
     var currentVideoUrl = null;
     var selectedManifestAudioName = null;
@@ -74,15 +78,107 @@ function Html5XPlayer() {
         //Refresh the indicators with the loaded names
         var selectedAudio = getSelectedAudioIndexTrack();
         var selectedSubtitle = getSelectedSubtitleIndexTrack();
-        setupAudioTrackIndicator(selectedAudio != null ? selectedAudio.track : null);
+        setupAudioTrackIndicator(
+            selectedAudio != null ? selectedAudio.track : null,
+            selectedAudio != null ? selectedAudio.index : -1
+        );
         setupSubtitleTrackIndicator(selectedSubtitle != null ? selectedSubtitle.track : null);
         if (!hasAudioTracks()) {
-            //No native audio tracks: show the manifest-based selection
-            var currentAudioName = getCurrentManifestAudioName();
+            //No native audio tracks: show the server-provided or manifest-based selection
+            var currentAudioName = getCurrentProvidedAudioName();
+            if (currentAudioName == null) {
+                currentAudioName = getCurrentManifestAudioName();
+            }
             audioTrackIndicator = currentAudioName != null ?
                     "{ico:msx-white:audiotrack} " + currentAudioName : null;
         }
         applyIndicators();
+    };
+    var setupProvidedAudioTracks = function(info) {
+        providedAudioTracks = [];
+        if (info == null) {
+            return;
+        }
+        var count = TVXTools.strToNum(info["html5x:audiotrack:count"], -1);
+        if (count <= 0) {
+            return;
+        }
+        for (var i = 0; i < count; i++) {
+            var prefix = "html5x:audiotrack:" + i;
+            providedAudioTracks.push({
+                name: TVXPropertyTools.getFullStr(info, prefix + ":name", null),
+                language: TVXPropertyTools.getFullStr(info, prefix + ":language", null),
+                group: TVXPropertyTools.getFullStr(info, prefix + ":group", null),
+                isDefault: TVXPropertyTools.getFullStr(info, prefix + ":default", "NO") === "YES"
+            });
+        }
+    };
+    var getProvidedAudioTrackName = function(track, index) {
+        if (providedAudioTracks.length == 0) {
+            return null;
+        }
+        if (track != null) {
+            var key = languageKey(track.language);
+            var occurrence = 0;
+            foreachAudioTrack(function(i, nativeTrack) {
+                if (nativeTrack === track) {
+                    return true;
+                }
+                var nativeKey = languageKey(nativeTrack.language);
+                if (key != null && nativeKey == key) {
+                    occurrence++;
+                }
+                return false;
+            });
+            var seen = 0;
+            for (var i = 0; i < providedAudioTracks.length; i++) {
+                var entry = providedAudioTracks[i];
+                if (key != null && languageKey(entry.language) == key) {
+                    if (seen == occurrence) {
+                        return TVXTools.isFullStr(entry.name) ? entry.name : null;
+                    }
+                    seen++;
+                }
+            }
+        }
+        //Final fallback: same position in the provided list
+        if (index >= 0 && index < providedAudioTracks.length && TVXTools.isFullStr(providedAudioTracks[index].name)) {
+            return providedAudioTracks[index].name;
+        }
+        return null;
+    };
+    var getUniqueProvidedAudioNames = function() {
+        var names = [];
+        for (var i = 0; i < providedAudioTracks.length; i++) {
+            var name = providedAudioTracks[i].name;
+            if (TVXTools.isFullStr(name) && names.indexOf(name) < 0) {
+                names.push(name);
+            }
+        }
+        return names;
+    };
+    var getDefaultProvidedAudioName = function() {
+        for (var i = 0; i < providedAudioTracks.length; i++) {
+            if (providedAudioTracks[i].isDefault && TVXTools.isFullStr(providedAudioTracks[i].name)) {
+                return providedAudioTracks[i].name;
+            }
+        }
+        return null;
+    };
+    var getCurrentProvidedAudioName = function() {
+        if (selectedManifestAudioName != null) {
+            return selectedManifestAudioName;
+        }
+        var defaultName = getDefaultProvidedAudioName();
+        if (defaultName != null) {
+            return defaultName;
+        }
+        for (var i = 0; i < providedAudioTracks.length; i++) {
+            if (TVXTools.isFullStr(providedAudioTracks[i].name)) {
+                return providedAudioTracks[i].name;
+            }
+        }
+        return null;
     };
     var fetchManifest = function(url, callback) {
         try {
@@ -308,6 +404,11 @@ function Html5XPlayer() {
         var index = indexTrack != null ? indexTrack.index : -1;
         var track = indexTrack != null ? indexTrack.track : null;
         if (index >= 0 && track != null) {
+            //KP-MSX patch: prefer server-provided names, then the manifest
+            var providedName = getProvidedAudioTrackName(track, index);
+            if (providedName != null) {
+                return providedName;
+            }
             //KP-MSX patch: prefer the name from the HLS master playlist
             var manifestName = getManifestTrackName(manifestAudioTracks, track, true);
             //Fallback: if the manifest order matches the native track order, use
@@ -359,15 +460,34 @@ function Html5XPlayer() {
             TVXServices.storage.remove(PROPERTY_PREFIX + "subtitle");
         }
     };
-    var setupAudioTrackIndicator = function(track) {
-        if (track != null && TVXTools.isFullStr(track.language)) {
+    var setupAudioTrackIndicator = function(track, index) {
+        if (track != null) {
+            //KP-MSX patch: prefer server-provided names, then the manifest
+            var providedName = getProvidedAudioTrackName(track, index);
+            if (providedName != null) {
+                audioTrackIndicator = "{ico:msx-white:audiotrack} " + providedName;
+                return;
+            }
             //KP-MSX patch: prefer the name from the HLS master playlist
-            var manifestName = getManifestTrackName(manifestAudioTracks, track, true);
-            audioTrackIndicator = "{ico:msx-white:audiotrack} " +
-                    (manifestName != null ? manifestName : track.language.toUpperCase());
-        } else {
-            audioTrackIndicator = null;
+            if (TVXTools.isFullStr(track.language)) {
+                var manifestName = getManifestTrackName(manifestAudioTracks, track, true);
+                audioTrackIndicator = "{ico:msx-white:audiotrack} " +
+                        (manifestName != null ? manifestName : track.language.toUpperCase());
+                return;
+            }
         }
+        //If the platform exposes no audioTracks, keep the current/default name
+        //visible in the indicator instead of clearing it.
+        if (!hasAudioTracks()) {
+            var currentAudioName = getCurrentProvidedAudioName();
+            if (currentAudioName == null) {
+                currentAudioName = getCurrentManifestAudioName();
+            }
+            audioTrackIndicator = currentAudioName != null ?
+                    "{ico:msx-white:audiotrack} " + currentAudioName : null;
+            return;
+        }
+        audioTrackIndicator = null;
     };
     var setupSubtitleTrackIndicator = function(track) {
         if (track != null && TVXTools.isFullStr(track.language)) {
@@ -411,7 +531,7 @@ function Html5XPlayer() {
                 track.enabled = false;
             }
         });
-        setupAudioTrackIndicator(selectedTrack);
+        setupAudioTrackIndicator(selectedTrack, trackIndex);
         if (store === true) {
             storeAudioTrack(selectedTrack);
         }
@@ -617,6 +737,7 @@ function Html5XPlayer() {
         setupCrossOrigin(info);
         setupRelatedContent(info);
         setupDefaultExtensionLabel(info);
+        setupProvidedAudioTracks(info);
         setupAudioTracks(info);
         setupSubtitleTracks(info, callback);
     };
@@ -649,6 +770,13 @@ function Html5XPlayer() {
             foreachAudioTrack(function(index, track) {
                 items.push(createTrackItem("audiotrack", index, getAudioTrackLabel(createIndexTrack(index, track)), isAudioTrackSelected(track)));
             });
+        } else if (providedAudioTracks.length > 0) {
+            //KP-MSX patch: server-supplied track names for multi-video items
+            var names = getUniqueProvidedAudioNames();
+            var currentName = getCurrentProvidedAudioName();
+            for (var i = 0; i < names.length; i++) {
+                items.push(createTrackItem("audiotrack", i, names[i], names[i] == currentName));
+            }
         } else {
             //KP-MSX patch: the platform exposes no audioTracks — build the
             //menu from the master playlist, switching goes through the proxy
@@ -657,9 +785,9 @@ function Html5XPlayer() {
             for (var i = 0; i < names.length; i++) {
                 items.push(createTrackItem("audiotrack", i, names[i], names[i] == currentName));
             }
-            if (items.length == 0) {
-                items.push(createTrackItem("audiotrack", -1, getAudioTrackLabel(null), true));
-            }
+        }
+        if (items.length == 0) {
+            items.push(createTrackItem("audiotrack", -1, getAudioTrackLabel(null), true));
         }
         return {
             cache: false,
@@ -752,9 +880,10 @@ function Html5XPlayer() {
                 TVXVideoPlugin.executeAction("cleanup");
                 var audioTrackIndex = TVXTools.strToNum(message.substr(11), -1);
                 //KP-MSX patch: manifest-based switching when the platform
-                //exposes no native audio tracks
+                //exposes no native audio tracks. Prefer server-provided names.
                 if (!hasAudioTracks() && audioTrackIndex >= 0) {
-                    var audioNames = getUniqueManifestAudioNames();
+                    var audioNames = providedAudioTracks.length > 0 ?
+                            getUniqueProvidedAudioNames() : getUniqueManifestAudioNames();
                     if (audioTrackIndex < audioNames.length) {
                         switchManifestAudioTrack(audioNames[audioTrackIndex]);
                     }

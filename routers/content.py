@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from fastapi import APIRouter
@@ -6,6 +7,7 @@ from starlette.requests import Request
 from config.globals import SUBSCRIPTION_BUTTON_ID
 from models.Content import Content
 from util import msx
+from util.proxy import extract_audio_tracks
 
 logger = logging.getLogger(__name__)
 
@@ -187,10 +189,27 @@ async def multivideo(
     if result is None:
         return msx.handle_exception()
 
+    audio_tracks_by_index = {}
+    if result.videos:
+        tasks = [
+            (index, extract_audio_tracks(video.video_url))
+            for index, video in enumerate(result.videos)
+            if video.video_url
+        ]
+        if tasks:
+            results = await asyncio.gather(
+                *[task for _, task in tasks],
+                return_exceptions=True
+            )
+            for (index, _), tracks in zip(tasks, results):
+                if isinstance(tracks, list) and tracks:
+                    audio_tracks_by_index[index] = tracks
+
     return result.to_multivideo_msx_panel(
         proxy=device.settings.proxy,
         alternative_player=device.settings.alternative_player,
-        device_settings=device.settings
+        device_settings=device.settings,
+        audio_tracks_by_index=audio_tracks_by_index
     )
 
 

@@ -57,6 +57,69 @@ async def close_session() -> None:
     SESSION = None
 
 
+async def extract_audio_tracks(
+    url: str
+) -> list[dict]:
+    """Fetch the raw HLS master playlist and extract audio rendition metadata.
+
+    Returns a list of dicts with keys: name, language, group, default.
+    Used to give the TV player authoritative track names before it has to
+    parse the manifest itself, which is useful when some video versions have
+    generic/missing NAME attributes (e.g. "TRACK1") while others have full
+    Russian names.
+    """
+    if not url:
+        return []
+
+    try:
+        session = await get_session()
+        async with session.get(url, headers={}) as response:
+            if response.status != 200:
+                logger.warning(
+                    'Failed to fetch audio tracks from %s: status %s',
+                    url,
+                    response.status
+                )
+                return []
+
+            text = await response.text()
+    except Exception as exc:
+        logger.warning(
+            'Failed to fetch audio tracks from %s: %s',
+            url,
+            exc
+        )
+        return []
+
+    tracks = []
+    for line in text.splitlines():
+        if not line.startswith('#EXT-X-MEDIA:'):
+            continue
+        if 'TYPE=AUDIO' not in line:
+            continue
+
+        name_match = re.search(r'NAME="([^"]*)"', line)
+        lang_match = re.search(r'LANGUAGE="([^"]*)"', line)
+        group_match = re.search(r'GROUP-ID="([^"]*)"', line)
+        default_match = re.search(r'DEFAULT=(YES|NO)', line)
+
+        name = name_match.group(1) if name_match else None
+        if name:
+            try:
+                name = unquote(name)
+            except Exception:
+                pass
+
+        tracks.append({
+            'name': name,
+            'language': lang_match.group(1) if lang_match else None,
+            'group': group_match.group(1) if group_match else None,
+            'default': default_match.group(1) == 'YES' if default_match else False,
+        })
+
+    return tracks
+
+
 def make_proxy_url(
     url
 ):
