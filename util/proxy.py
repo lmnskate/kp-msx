@@ -120,67 +120,6 @@ async def extract_audio_tracks(
     return tracks
 
 
-def merge_audio_track_names(
-    tracks_by_video: list[list[dict]]
-) -> list[list[dict]]:
-    r"""Merge audio track names across video versions.
-
-    Some KinoPub video versions (e.g. different FPS or cuts) expose generic
-    or missing audio track names ("TRACK1") while another version of the same
-    content has proper Russian names. This function builds a map of the best
-    available name for each (language, occurrence) pair and applies it to all
-    versions that only have a generic name.
-
-    A name is considered generic if it matches TRACK\d*, AUDIO\d*, UND, or is
-    just digits / empty.
-    """
-    generic_patterns = [
-        re.compile(r'^TRACK\d*$', re.IGNORECASE),
-        re.compile(r'^AUDIO\d*$', re.IGNORECASE),
-        re.compile(r'^UND$', re.IGNORECASE),
-        re.compile(r'^\d+$'),
-    ]
-
-    def is_generic(name):
-        if not name:
-            return True
-        return any(p.match(name) for p in generic_patterns)
-
-    # Find the best available name for each (language, occurrence)
-    best_names = {}
-    for tracks in tracks_by_video:
-        language_counts = {}
-        for track in tracks:
-            language = track.get('language')
-            occurrence = language_counts.get(language, 0)
-            language_counts[language] = occurrence + 1
-            key = (language, occurrence)
-            if key not in best_names:
-                best_names[key] = track.get('name')
-            elif is_generic(best_names[key]) and not is_generic(track.get('name')):
-                best_names[key] = track.get('name')
-
-    # Apply best names back to each version
-    result = []
-    for tracks in tracks_by_video:
-        language_counts = {}
-        merged = []
-        for track in tracks:
-            language = track.get('language')
-            occurrence = language_counts.get(language, 0)
-            language_counts[language] = occurrence + 1
-            key = (language, occurrence)
-            new_track = track.copy()
-            if is_generic(track.get('name')) and key in best_names:
-                candidate = best_names[key]
-                if not is_generic(candidate):
-                    new_track['name'] = candidate
-            merged.append(new_track)
-        result.append(merged)
-
-    return result
-
-
 def make_proxy_url(
     url
 ):
