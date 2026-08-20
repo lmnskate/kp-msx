@@ -72,7 +72,10 @@ async def menu(
 
     categories = await msx.build_categories(device)
 
-    return msx.registered_menu(categories)
+    return msx.registered_menu(
+        categories,
+        device_settings=device.settings
+    )
 
 
 @router.get('/category')

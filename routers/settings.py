@@ -12,7 +12,10 @@ router = APIRouter(prefix='/msx/settings')
 async def settings_screen(
     request: Request
 ):
-    return msx.settings_screen(screen=True)
+    return msx.settings_screen(
+        screen=True,
+        device_settings=request.state.device.settings
+    )
 
 
 @router.get('')
@@ -112,8 +115,6 @@ async def toggle_setting(
 async def toggle_player(
     request: Request
 ):
-    # Main-menu "Сменить плеер" action: flips the local alternative_player
-    # setting and reloads the app so the change takes effect immediately.
     await request.state.device.toggle(ALTERNATIVE_PLAYER_ID)
 
     return msx.restart()

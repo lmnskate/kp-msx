@@ -1,12 +1,10 @@
-from config.globals import (ALTERNATIVE_PLAYER_ID, HDR_ID, HEVC_ID, LENNY,
-                            MENU_ID, SWITCH_IDS, UHD_ID)
+from config.globals import HDR_ID, HEVC_ID, LENNY, MENU_ID, SWITCH_IDS, UHD_ID
 from util import msx
 
 TOGGLE_BUTTONS = [
     (UHD_ID, '4K', 'uhd'),
     (HDR_ID, 'HDR', 'hdr'),
-    (HEVC_ID, 'HEVC', 'hevc'),
-    (ALTERNATIVE_PLAYER_ID, 'Альтернативный плеер', 'alternative_player')
+    (HEVC_ID, 'HEVC', 'hevc')
 ]
 
 
