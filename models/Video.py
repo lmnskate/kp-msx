@@ -20,26 +20,8 @@ class Video(Playable):
         self,
         proxy: bool = False,
         alternative_player: bool = False,
-        device_settings=None,
-        audio_tracks=None
+        device_settings=None
     ):
-        properties = self.msx_properties(
-            proxy=proxy,
-            alternative_player=alternative_player
-        )
-
-        if audio_tracks:
-            properties['html5x:audiotrack:count'] = str(len(audio_tracks))
-            for index, track in enumerate(audio_tracks):
-                prefix = f'html5x:audiotrack:{index}'
-                if track.get('language'):
-                    properties[f'{prefix}:language'] = track['language']
-                if track.get('name'):
-                    properties[f'{prefix}:name'] = track['name']
-                if track.get('group'):
-                    properties[f'{prefix}:group'] = track['group']
-                properties[f'{prefix}:default'] = 'YES' if track.get('default') else 'NO'
-
         return {
             'title': self.title,
             'titleFooter': self.footer(),
@@ -50,7 +32,10 @@ class Video(Playable):
                 proxy=proxy,
                 alternative_player=alternative_player
             ),
-            'properties': properties
+            'properties': self.msx_properties(
+                proxy=proxy,
+                alternative_player=alternative_player
+            )
         }
 
     def trigger_ready(

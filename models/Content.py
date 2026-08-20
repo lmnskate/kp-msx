@@ -332,11 +332,8 @@ class Content:
         self,
         proxy: bool = False,
         alternative_player: bool = False,
-        device_settings=None,
-        audio_tracks_by_index=None
+        device_settings=None
     ):
-        audio_tracks_by_index = audio_tracks_by_index or {}
-
         return {
             'type': 'list',
             'headline': self.title,
@@ -353,10 +350,9 @@ class Content:
                 i.to_multivideo_entry(
                     proxy=proxy,
                     alternative_player=alternative_player,
-                    device_settings=device_settings,
-                    audio_tracks=audio_tracks_by_index.get(index)
+                    device_settings=device_settings
                 )
-                for index, i in enumerate(self.videos)
+                for i in self.videos
             ]
         }
 
