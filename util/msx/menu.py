@@ -23,7 +23,7 @@ async def build_categories(
 def start():
     return {
         'name': 'Kinopub',
-        'version': '2.3.2',
+        'version': '2.3.3',
         'parameter': format_action('/msx/menu', module='menu'),
         'welcome': 'none',
         'launcher': {
@@ -41,7 +41,7 @@ def change_player_item():
         'type': 'default',
         'label': 'Сменить плеер',
         'image': icon('spanner'),
-        'data': format_action(
+        'action': format_action(
             '/msx/settings/toggle_player',
             module='execute'
         )
