@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from starlette.requests import Request
 
-from config.globals import SERVER_ID, SWITCH_IDS
+from config.globals import ALTERNATIVE_PLAYER_ID, SERVER_ID, SWITCH_IDS
 from models.Device import KP_TOGGLES, LOCAL_TOGGLES
 from util import msx
 
@@ -106,6 +106,17 @@ async def toggle_setting(
         )
 
     return msx.empty_response()
+
+
+@router.post('/toggle_player')
+async def toggle_player(
+    request: Request
+):
+    # Main-menu "Сменить плеер" action: flips the local alternative_player
+    # setting and reloads the app so the change takes effect immediately.
+    await request.state.device.toggle(ALTERNATIVE_PLAYER_ID)
+
+    return msx.restart()
 
 
 @router.post('/toggle_menu_entry/{menu_entry}')

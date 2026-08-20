@@ -23,7 +23,7 @@ async def build_categories(
 def start():
     return {
         'name': 'Kinopub',
-        'version': '2.3.1',
+        'version': '2.3.2',
         'parameter': format_action('/msx/menu', module='menu'),
         'welcome': 'none',
         'launcher': {
@@ -31,6 +31,20 @@ def start():
             'image': icon('logo'),
             'color': 'none'
         }
+    }
+
+
+def change_player_item():
+    # Appended to the main menu directly (not via Category), so it cannot be
+    # hidden through the "Пункты меню" settings and always stays at the bottom.
+    return {
+        'type': 'default',
+        'label': 'Сменить плеер',
+        'image': icon('spanner'),
+        'data': format_action(
+            '/msx/settings/toggle_player',
+            module='execute'
+        )
     }
 
 
@@ -61,6 +75,8 @@ def registered_menu(
 
     if not menu:
         menu = [sad_screen()]
+
+    menu.append(change_player_item())
 
     return {
         'reuse': False,
