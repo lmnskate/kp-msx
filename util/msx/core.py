@@ -1,6 +1,5 @@
 from urllib.parse import urlencode
 
-from config.globals import LENNY, SAD_LENNY
 from config.settings import server
 
 POSTER_TEMPLATE = {
@@ -59,10 +58,10 @@ def format_action(
 def sad_screen():
     return {
         'type': 'default',
-        'label': SAD_LENNY,
+        'label': 'Меню пусто',
         'data': {
             'type': 'pages',
-            'headline': SAD_LENNY,
+            'headline': 'Меню пусто',
             'pages': [
                 {
                     'items': [
@@ -120,9 +119,48 @@ def empty_item():
         'layout': '0,0,12,1',
         'color': 'msx-glass',
         'alignment': 'center',
-        'label': SAD_LENNY,
-        'titleFooter': 'Здесь пока ничего нет',
+        'label': 'Здесь пока ничего нет',
         'action': '[]'
+    }
+
+
+def empty_search_response():
+    item = {
+        'type': 'button',
+        'layout': '0,0,12,2',
+        'alignment': 'center',
+        'enumerate': False,
+        'image': icon('error'),
+        'imageWidth': 'small',
+        'label': 'Ничего не найдено',
+        'action': '[]'
+    }
+
+    return {
+        'type': 'list',
+        'wrap': True,
+        'preload': 'none',
+        'template': item.copy(),
+        'items': [item]
+    }
+
+
+def empty_history_response():
+    item = {
+        'type': 'button',
+        'layout': '0,0,12,6',
+        'alignment': 'center',
+        'enumerate': False,
+        'label': 'История просмотра пуста',
+        'action': '[]'
+    }
+
+    return {
+        'type': 'list',
+        'wrap': True,
+        'preload': 'none',
+        'template': item.copy(),
+        'items': [item]
     }
 
 
@@ -188,7 +226,7 @@ def handle_exception(
         items = [msg, restart_app_btn, reload_content_btn, reload_panel_btn]
 
     return {
-        'menu': [{'label': LENNY, 'data': format_action('/msx/error')}],
+        'menu': [{'label': 'Ошибка', 'data': format_action('/msx/error')}],
         'type': 'pages',
         'headline': 'Ошибка',
         'pages': [{'items': items}]
@@ -197,7 +235,7 @@ def handle_exception(
 
 def unsupported_version():
     return {
-        'menu': [{'label': LENNY, 'data': format_action('/msx/too_old')}],
+        'menu': [{'label': 'Обновите MSX', 'data': format_action('/msx/too_old')}],
         'type': 'pages',
         'headline': 'Ошибка',
         'pages': [

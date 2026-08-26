@@ -252,6 +252,9 @@ async def search(
     query = request.query_params.get('q')
     result = await device.kp.search(query)
 
+    if not result:
+        return msx.empty_search_response()
+
     return msx.content_list(
         result,
         decompress=False,
@@ -266,6 +269,9 @@ async def history(
     device = request.state.device
     page = _page(request)
     result = await device.kp.get_history(page=page)
+
+    if page == 1 and not result:
+        return msx.empty_history_response()
 
     return msx.content_list(
         result,

@@ -23,7 +23,7 @@ async def build_categories(
 def start():
     return {
         'name': 'Kinopub',
-        'version': '2.4.0',
+        'version': '2.4.1',
         'parameter': format_action('/msx/menu', module='menu'),
         'welcome': 'none',
         'launcher': {

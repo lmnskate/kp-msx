@@ -29,10 +29,6 @@ COMPOUND_TLDS = frozenset([
     'com.sg', 'com.tr', 'co.in'
 ])
 
-# MSX text icons
-LENNY = '¯\\_(ツ)_/¯'
-SAD_LENNY = '(◡︵◡)'
-
 # MSX settings UI element IDs
 UHD_ID = 'uhd'
 HDR_ID = 'hdr'

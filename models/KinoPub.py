@@ -394,7 +394,7 @@ class KinoPub:
             '/device/notify',
             {
                 'title': 'KP-MSX',
-                'hardware': g.LENNY,
+                'hardware': 'unknown',
                 'software': device_id
             },
             method='POST'

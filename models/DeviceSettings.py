@@ -1,4 +1,4 @@
-from config.globals import HDR_ID, HEVC_ID, LENNY, MENU_ID, SWITCH_IDS, UHD_ID
+from config.globals import HDR_ID, HEVC_ID, MENU_ID, SWITCH_IDS, UHD_ID
 from util import msx
 
 TOGGLE_BUTTONS = [
@@ -27,7 +27,7 @@ class DeviceSettings:
         if self.poster_size is None:
             self.poster_size = 'small' if data.get('small_posters', False) else 'big'
         self.poster_proxy = data.get('poster_proxy')
-        self.server = data.get('server', LENNY)
+        self.server = data.get('server')
 
     def to_dict(
         self
