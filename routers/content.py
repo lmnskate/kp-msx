@@ -172,7 +172,7 @@ async def content_detail(
     device = request.state.device
     result = await _get_content(device, request)
     if result is None:
-        return msx.handle_exception()
+        return msx.does_not_exist()
 
     return result.to_msx_panel(
         proxy=device.settings.proxy,
@@ -188,7 +188,7 @@ async def multivideo(
     device = request.state.device
     result = await _get_content(device, request)
     if result is None:
-        return msx.handle_exception()
+        return msx.does_not_exist()
 
     return result.to_multivideo_msx_panel(
         proxy=device.settings.proxy,
@@ -220,7 +220,7 @@ async def seasons(
     device = request.state.device
     result = await _get_content(device, request)
     if result is None:
-        return msx.handle_exception()
+        return msx.does_not_exist()
 
     return result.to_seasons_msx_panel(
         device_settings=device.settings
@@ -234,7 +234,7 @@ async def episodes(
     device = request.state.device
     result = await _get_content(device, request)
     if result is None:
-        return msx.handle_exception()
+        return msx.does_not_exist()
 
     return result.to_episodes_msx_panel(
         _int_param(request, 'season', 1),
@@ -262,7 +262,6 @@ async def search(
     )
 
 
-@router.get('/history')
 async def history(
     request: Request
 ):

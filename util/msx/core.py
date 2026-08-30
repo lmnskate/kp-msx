@@ -184,6 +184,34 @@ def restart():
     return {'response': {'status': 200, 'data': {'action': 'reload'}}}
 
 
+def does_not_exist():
+    return {
+        'type': 'pages',
+        'headline': '(◡︵◡)',
+        'pages': [
+            {
+                'items': [
+                    {
+                        'type': 'space',
+                        'layout': '0,0,8,2',
+                        'color': 'msx-glass',
+                        'alignment': 'center',
+                        'headline': 'Ничего не нашлось',
+                        'text': 'Этот контент сейчас недоступен. Возможно, он когда-нибудь снова появится.'
+                    },
+                    {
+                        'type': 'button',
+                        'layout': '2,2,4,1',
+                        'image': icon('refresh'),
+                        'label': 'Вернуться назад',
+                        'action': 'back'
+                    }
+                ]
+            }
+        ]
+    }
+
+
 def handle_exception(
     error_page=False
 ):

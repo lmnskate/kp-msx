@@ -198,7 +198,9 @@ class Content:
             'properties': props,
             'action': msx.play_action(
                 self.trailer,
-                proxy=proxy,
+                # Trailers are short and usually work fine without proxy;
+                # forcing direct avoids unnecessary proxy load/issues.
+                proxy=False,
                 alternative_player=alternative_player
             )
         }
@@ -248,6 +250,17 @@ class Content:
 
         buttons = [watch_button] + buttons
 
+        stamp_parts = []
+        if self.rating:
+            stamp_parts.append(f'{{ico:stars}} {self.rating}')
+        if self.year:
+            stamp_parts.append(f'{{ico:calendar-month}} {self.year}')
+        if self.is_4k:
+            stamp_parts.append('{ico:4k}')
+        if self.new_episodes is not None:
+            stamp_parts.append(f'{{ico:new-releases}} {self.new_episodes}')
+        stamp = ' '.join(stamp_parts) or None
+
         teaser = {
             'id': 'teaser',
             'type': 'teaser',
@@ -257,15 +270,8 @@ class Content:
             'imageOverlay': 2,
             'action': 'focus:plot'
         }
-        if self.rating:
-            teaser['badge'] = str(self.rating)
-            teaser['badgeColor'] = self.rating_color()
-        if self.year:
-            teaser['tag'] = str(self.year)
-            teaser['tagColor'] = 'msx-glass'
-        if self.is_4k:
-            teaser['stamp'] = '4K'
-            teaser['stampColor'] = 'msx-blue'
+        if stamp:
+            teaser['stamp'] = stamp
 
         page_items = [
             teaser,
@@ -283,9 +289,7 @@ class Content:
             'headline': self.title,
             'background': self.poster.get_wide(device_settings),
             'pages': [
-                {
-                    'items': page_items
-                },
+                {'items': page_items},
                 {
                     'items': [
                         {

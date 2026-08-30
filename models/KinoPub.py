@@ -218,12 +218,13 @@ class KinoPub:
 
     async def search(
         self,
-        query
+        query,
+        page=1
     ):
         return await self.fetch_list(
             '/items/search',
             Content,
-            params={'q': query},
+            params={'q': query, 'page': page},
             default=[]
         )
 

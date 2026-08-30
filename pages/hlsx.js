@@ -16,6 +16,10 @@ function HlsPlayer() {
     var ready = false;
     var ended = false;
 
+    //KP-MSX patch: the buffered-start seek hack below must run only once,
+    //otherwise every appended segment can force the playhead forward again.
+    var initialBufferSeekDone = false;
+
     //--------------------------------------------------------------------------
     //Progress reporting (KP-MSX patch)
     //--------------------------------------------------------------------------
@@ -742,13 +746,14 @@ function HlsPlayer() {
         selectQualityLevel(getDefaultQualityLevelIndex(), false, true);
     };
     var onBufferAppended = function(event, data) {
-        if (data.type === 'video' && player.buffered.length > 0) {
-			const start = player.buffered.start(0);
-			if (start > 0.5 && player.currentTime < start) {
-			  player.currentTime = start;
-			  player.play();
-			}
-		}
+        if (!initialBufferSeekDone && data.type === 'video' && player.buffered.length > 0) {
+            var start = player.buffered.start(0);
+            if (start > 0.5 && player.currentTime < start) {
+                initialBufferSeekDone = true;
+                player.currentTime = start;
+                player.play();
+            }
+        }
     };
     var getErrorText = function(code) {
         if (code == 1) {
@@ -833,7 +838,13 @@ function HlsPlayer() {
 
                 if (Hls.isSupported()) {
                     hls = new Hls({
-                      renderTextTracksNatively: true,
+                        renderTextTracksNatively: true,
+                        //KP-MSX patch: be less aggressive when recovering from
+                        //buffer stalls/gaps, so the player does not skip ahead
+                        maxBufferHole: 0.5,
+                        highBufferWatchdogPeriod: 2,
+                        nudgeOffset: 0.1,
+                        nudgeMaxRetry: 5
                     });
 
                     hls.loadSource(url);
