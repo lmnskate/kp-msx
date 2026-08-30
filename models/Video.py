@@ -1,5 +1,4 @@
 from models.Playable import Playable
-from util import msx
 
 
 class Video(Playable):
@@ -14,6 +13,7 @@ class Video(Playable):
         self.content_id = content_id
         self.content_title = content_title
 
+        self.n = data.get('number')
         self.title = data.get('title')
 
     def to_multivideo_entry(
@@ -37,17 +37,6 @@ class Video(Playable):
                 alternative_player=alternative_player
             )
         }
-
-    def trigger_ready(
-        self
-    ):
-        return msx.format_action(
-            path='/msx/play',
-            params={
-                'content_id': self.content_id
-            },
-            module='execute'
-        )
 
     def resume_key(
         self

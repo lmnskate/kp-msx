@@ -1,8 +1,10 @@
+import asyncio
 import logging
 import os
 import posixpath
 import re
 import tempfile
+import time
 from urllib.parse import unquote, urlencode, urljoin, urlparse
 
 import aiohttp
@@ -22,6 +24,10 @@ CLIENT_TIMEOUT = aiohttp.ClientTimeout(
     total=None,
     sock_read=30
 )
+
+MAX_RETRIES = 1
+_PLAYLIST_CACHE_TTL = 5.0
+_PLAYLIST_CACHE: dict[tuple[str, str | None], tuple[float, bytes, str | None, dict]] = {}
 
 KNOWN_DOMAINS: set[str] = set()
 
@@ -180,6 +186,51 @@ def check_url(
     return True
 
 
+def _copy_response_headers(
+    response,
+    headers=None
+):
+    if headers is None:
+        headers = {}
+
+    for header in (
+        'Content-Range',
+        'Accept-Ranges',
+        'Content-Length'
+    ):
+        if header in response.headers:
+            headers[header] = response.headers[header]
+
+    return headers
+
+
+async def _fetch(
+    method,
+    url,
+    headers,
+    max_retries=MAX_RETRIES
+):
+    last_error = None
+    for attempt in range(max_retries + 1):
+        try:
+            session = await get_session()
+            response = await session.request(
+                method,
+                url,
+                headers=headers
+            )
+            if response.status >= 500 and attempt < max_retries:
+                await response.release()
+                continue
+            return response
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            last_error = e
+            if attempt < max_retries:
+                continue
+            raise last_error
+    raise last_error
+
+
 def rewrite_domain(
     url: str,
     content: str
@@ -263,6 +314,30 @@ def filter_audio_track(
     return '\n'.join(lines) + '\n'
 
 
+def _is_vod_playlist(
+    text: str
+) -> bool:
+    return '#EXT-X-ENDLIST' in text
+
+
+def _cache_playlist(
+    cache_key,
+    entry
+):
+    # Evict expired entries so the cache cannot grow unboundedly
+    now = time.monotonic()
+    if len(_PLAYLIST_CACHE) > 64:
+        stale = [
+            key for key, (cached_at, *_)
+            in _PLAYLIST_CACHE.items()
+            if now - cached_at >= _PLAYLIST_CACHE_TTL
+        ]
+        for key in stale:
+            del _PLAYLIST_CACHE[key]
+
+    _PLAYLIST_CACHE[cache_key] = entry
+
+
 async def get(
     url,
     audio_name=None,
@@ -272,14 +347,18 @@ async def get(
     if client_headers and 'Range' in client_headers:
         request_headers['Range'] = client_headers['Range']
 
-    session = await get_session()
-    response = await session.get(url, headers=request_headers)
+    cache_key = (url, audio_name)
+    if not request_headers:
+        cached = _PLAYLIST_CACHE.get(cache_key)
+        if cached is not None:
+            cached_at, content, content_type, response_headers = cached
+            if time.monotonic() - cached_at < _PLAYLIST_CACHE_TTL:
+                return 200, content_type, response_headers, content
+
+    response = await _fetch('GET', url, request_headers)
 
     content_type = response.headers.get('content-type')
-    response_headers = {}
-    for header in ('Content-Range', 'Accept-Ranges'):
-        if header in response.headers:
-            response_headers[header] = response.headers[header]
+    response_headers = _copy_response_headers(response)
 
     is_text_playlist = ((
         content_type is not None and 'mpegurl' in content_type.lower()
@@ -299,7 +378,16 @@ async def get(
                 audio_name
             )
 
-        return response.status, content_type, response_headers, text_content.encode('utf-8')
+        encoded = text_content.encode('utf-8')
+        if not request_headers and (audio_name or _is_vod_playlist(text_content)):
+            _cache_playlist(cache_key, (
+                time.monotonic(),
+                encoded,
+                content_type,
+                response_headers
+            ))
+
+        return response.status, content_type, response_headers, encoded
 
     async def _chunks():
         try:
@@ -309,6 +397,22 @@ async def get(
             await response.release()
 
     return response.status, content_type, response_headers, _chunks()
+
+
+async def head(
+    url,
+    client_headers=None
+):
+    request_headers = {}
+    if client_headers and 'Range' in client_headers:
+        request_headers['Range'] = client_headers['Range']
+
+    response = await _fetch('HEAD', url, request_headers)
+    content_type = response.headers.get('content-type')
+    response_headers = _copy_response_headers(response)
+    await response.release()
+
+    return response.status, content_type, response_headers
 
 
 def srt_to_vtt(

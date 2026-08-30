@@ -15,6 +15,74 @@ function Html5XPlayer() {
     var livePosition = 0;
 
     //--------------------------------------------------------------------------
+    //Progress reporting (KP-MSX patch)
+    //--------------------------------------------------------------------------
+    var PROGRESS_INTERVAL_MS = 10000;
+    var progressTimer = null;
+    var progressData = null;
+    var lastSentPosition = -1;
+
+    var readProgressParams = function() {
+        var content_id = TVXServices.urlParams.get("content_id");
+        if (!TVXTools.isFullStr(content_id)) {
+            return null;
+        }
+        return {
+            client_id: TVXServices.urlParams.get("client_id"),
+            content_id: content_id,
+            season: TVXServices.urlParams.get("season"),
+            episode: TVXServices.urlParams.get("episode")
+        };
+    };
+
+    var sendProgress = function(position) {
+        if (progressData == null || !TVXTools.isFullStr(progressData.client_id)) {
+            return;
+        }
+        position = Math.floor(position);
+        if (position <= 0 || position === lastSentPosition) {
+            return;
+        }
+        lastSentPosition = position;
+        var parts = [];
+        parts.push("id=" + encodeURIComponent(progressData.client_id));
+        parts.push("content_id=" + encodeURIComponent(progressData.content_id));
+        if (TVXTools.isFullStr(progressData.season)) {
+            parts.push("season=" + encodeURIComponent(progressData.season));
+        }
+        if (TVXTools.isFullStr(progressData.episode)) {
+            parts.push("episode=" + encodeURIComponent(progressData.episode));
+        }
+        parts.push("position=" + encodeURIComponent(position));
+
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "/msx/progress?" + parts.join("&"), true);
+        xhr.send();
+    };
+
+    var startProgressReporting = function() {
+        if (progressTimer != null) {
+            return;
+        }
+        progressData = readProgressParams();
+        if (progressData == null) {
+            return;
+        }
+        progressTimer = setInterval(function() {
+            if (player != null && isFinite(player.duration)) {
+                sendProgress(player.currentTime);
+            }
+        }, PROGRESS_INTERVAL_MS);
+    };
+
+    var stopProgressReporting = function() {
+        if (progressTimer != null) {
+            clearInterval(progressTimer);
+            progressTimer = null;
+        }
+    };
+
+    //--------------------------------------------------------------------------
     //Audio & Subtitle Tracks
     //--------------------------------------------------------------------------
     var PROPERTY_PREFIX = "html5x:";
@@ -864,6 +932,8 @@ function Html5XPlayer() {
         if (!ended) {
             ended = true;
             TVXVideoPlugin.debug("Video ended");
+            sendProgress(player != null ? player.currentTime : 0);
+            stopProgressReporting();
             TVXVideoPlugin.stopPlayback();
         }
     };
@@ -891,6 +961,7 @@ function Html5XPlayer() {
         //Note: URL does not need to be an HTTP/HTTPS URL (it can be any URL)
         if (TVXTools.isFullStr(url)) {
             currentVideoUrl = url;//KP-MSX patch
+            startProgressReporting();
             TVXVideoPlugin.requestData("video:info", function(data) {
                 setupVideoInfo(data, function() {
                     player.src = url;
@@ -951,6 +1022,7 @@ function Html5XPlayer() {
             player.removeEventListener("abort", onContinue);
             player = null;
         }
+        stopProgressReporting();
     };
     this.play = function() {
         if (player != null) {

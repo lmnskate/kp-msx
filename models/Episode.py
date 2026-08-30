@@ -1,5 +1,4 @@
 from models.Playable import Playable
-from util import msx
 
 
 class Episode(Playable):
@@ -32,21 +31,6 @@ class Episode(Playable):
         title = self.title or 'Серия'
 
         return f'[S{self.season}/E{self.n}] {title}'
-
-    def trigger_ready(
-        self
-    ):
-        params = {
-            'content_id': self.content_id,
-            'season': self.season,
-            'episode': self.n
-        }
-
-        return msx.format_action(
-            '/msx/play',
-            params=params,
-            module='execute'
-        )
 
     def resume_key(
         self

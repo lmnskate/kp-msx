@@ -376,15 +376,93 @@ async def clear_history(
     return msx.empty_response()
 
 
+def _find_video_watched(
+    content,
+    season,
+    episode
+):
+    if season and episode and content.seasons:
+        for s in content.seasons:
+            if s.n != season:
+                continue
+            for ep in s.episodes:
+                if ep.n == episode:
+                    return ep.watched
+            break
+
+    if content.videos:
+        for v in content.videos:
+            if v.n == episode:
+                return v.watched
+
+    return content.watched
+
+
+@router.post('/progress')
+async def progress(
+    request: Request
+):
+    device = request.state.device
+    content_id = request.query_params.get('content_id')
+    if not content_id:
+        return msx.empty_response()
+
+    season = _int_param(request, 'season', 0)
+    episode = _int_param(request, 'episode', 0)
+    position = _int_param(request, 'position', 0)
+
+    if position <= 0:
+        return msx.empty_response()
+
+    await device.kp.mark_time(
+        content_id,
+        position,
+        season=str(season) if season > 0 else None,
+        episode=str(episode) if episode > 0 else None
+    )
+
+    return msx.empty_response()
+
+
 @router.post('/play')
 async def play(
     request: Request
 ):
     device = request.state.device
     content_id = request.query_params.get('content_id')
-    season = request.query_params.get('season')
-    episode = request.query_params.get('episode')
+    status = request.query_params.get('status')
 
+    if status != 'complete':
+        # Legacy start-of-playback behaviour: keep toggling watched on start
+        # for compatibility with older cached panels/actions.
+        result = await _get_content(device, request)
+        if result is None:
+            return msx.empty_response()
+
+        season = _int_param(request, 'season', 0)
+        episode = _int_param(request, 'episode', 0)
+
+        if season > 0 and episode > 0:
+            for s in result.seasons or []:
+                if s.n != season:
+                    continue
+                for ep in s.episodes:
+                    if ep.n == episode:
+                        if not ep.watched:
+                            await device.kp.toggle_watched(
+                                content_id,
+                                str(season),
+                                str(episode)
+                            )
+                        break
+                break
+        else:
+            if not result.watched:
+                await device.kp.toggle_watched(content_id)
+
+        return msx.empty_response()
+
+    # status == 'complete': mark the item as watched only if it is not already
     result = await _get_content(device, request)
     if result is None:
         return msx.empty_response()
@@ -392,23 +470,14 @@ async def play(
     season = _int_param(request, 'season', 0)
     episode = _int_param(request, 'episode', 0)
 
-    if season > 0 and episode > 0:
-        for s in result.seasons or []:
-            if s.n != season:
-                continue
-            for ep in s.episodes:
-                if ep.n == episode:
-                    if not ep.watched:
-                        await device.kp.toggle_watched(
-                            content_id,
-                            str(season),
-                            str(episode)
-                        )
-                    break
-            break
-    else:
-        if not result.watched:
-            await device.kp.toggle_watched(content_id)
+    if _find_video_watched(result, season, episode):
+        return msx.empty_response()
+
+    await device.kp.toggle_watched(
+        content_id,
+        str(season) if season > 0 else None,
+        str(episode) if episode > 0 else None
+    )
 
     return msx.empty_response()
 

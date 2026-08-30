@@ -12,6 +12,12 @@ HDR_SETTING = 'supportHdr'
 MIXED_PLAYLIST_SETTING = 'mixedPlaylist'
 SERVER_LOCATION_SETTING = 'serverLocation'
 
+# Preferred stream protocols in fallback order
+PROTOCOL_PRIORITY = ['hls4', 'hls2', 'hls', 'http']
+
+# Known quality labels ordered by ascending resolution
+QUALITY_ORDER = ['480p', '720p', '1080p', '2160p']
+
 # File with all CDN domains seen by the server (for domain-based routing);
 # contains registrable domains only (second-level + TLD)
 CDN_DOMAINS_FILE = 'cdn-domains.txt'

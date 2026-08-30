@@ -1,11 +1,13 @@
 /******************************************************************************/
-//HlsPlayer with Subtitles v0.0.2 (lib v1.5.11)
+//HlsPlayer with Subtitles v0.0.2 (hls.js v1.7.1)
 //Original version (c) 2022 Benjamin Zachey
 //related API: https://github.com/video-dev/hls.js
 //
 //KP-MSX patch: the track indicators in the top-right corner show the full
 //track name from the HLS manifest (e.g. "01. Двухголосый. Twister (RUS)")
-//instead of an uppercased 8-character prefix. All patches are marked.
+//instead of an uppercased 8-character prefix; quality choice is keyed by
+//rendition height; playback position is reported to /msx/progress every
+//10 s while it changes. All patches are marked.
 /******************************************************************************/
 function HlsPlayer() {
     var infoData = null;
@@ -13,6 +15,74 @@ function HlsPlayer() {
     var player = null;
     var ready = false;
     var ended = false;
+
+    //--------------------------------------------------------------------------
+    //Progress reporting (KP-MSX patch)
+    //--------------------------------------------------------------------------
+    var PROGRESS_INTERVAL_MS = 10000;
+    var progressTimer = null;
+    var progressData = null;
+    var lastSentPosition = -1;
+
+    var readProgressParams = function() {
+        var content_id = TVXServices.urlParams.get("content_id");
+        if (!TVXTools.isFullStr(content_id)) {
+            return null;
+        }
+        return {
+            client_id: TVXServices.urlParams.get("client_id"),
+            content_id: content_id,
+            season: TVXServices.urlParams.get("season"),
+            episode: TVXServices.urlParams.get("episode")
+        };
+    };
+
+    var sendProgress = function(position) {
+        if (progressData == null || !TVXTools.isFullStr(progressData.client_id)) {
+            return;
+        }
+        position = Math.floor(position);
+        if (position <= 0 || position === lastSentPosition) {
+            return;
+        }
+        lastSentPosition = position;
+        var parts = [];
+        parts.push("id=" + encodeURIComponent(progressData.client_id));
+        parts.push("content_id=" + encodeURIComponent(progressData.content_id));
+        if (TVXTools.isFullStr(progressData.season)) {
+            parts.push("season=" + encodeURIComponent(progressData.season));
+        }
+        if (TVXTools.isFullStr(progressData.episode)) {
+            parts.push("episode=" + encodeURIComponent(progressData.episode));
+        }
+        parts.push("position=" + encodeURIComponent(position));
+
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "/msx/progress?" + parts.join("&"), true);
+        xhr.send();
+    };
+
+    var startProgressReporting = function() {
+        if (progressTimer != null) {
+            return;
+        }
+        progressData = readProgressParams();
+        if (progressData == null) {
+            return;
+        }
+        progressTimer = setInterval(function() {
+            if (player != null && isFinite(player.duration)) {
+                sendProgress(player.currentTime);
+            }
+        }, PROGRESS_INTERVAL_MS);
+    };
+
+    var stopProgressReporting = function() {
+        if (progressTimer != null) {
+            clearInterval(progressTimer);
+            progressTimer = null;
+        }
+    };
 
     //--------------------------------------------------------------------------
     //Audio & Subtitle Tracks
@@ -99,7 +169,7 @@ function HlsPlayer() {
         return track != null && hls.subtitleTrackController.subtitleTrack === track.id;
     };
     var isQualityLevelSelected = function(level) {
-        return level != null && getStoredQualityLevel() == level.width.toString();
+        return level != null && getStoredQualityLevel() == level.height.toString();
     };
     var createIndexTrack = function(index, track) {
         if (index >= 0 && track != null) {
@@ -155,8 +225,8 @@ function HlsPlayer() {
         return TVXServices.storage.get(PROPERTY_PREFIX + "subtitle")
     }
     var storeQualityLevel = function(level) {
-        if (level != null && level.width != null && TVXTools.isFullStr(level.width.toString())) {
-            TVXServices.storage.set(PROPERTY_PREFIX + "qualityLevel", level.width);
+        if (level != null && level.height != null && TVXTools.isFullStr(level.height.toString())) {
+            TVXServices.storage.set(PROPERTY_PREFIX + "qualityLevel", level.height);
         } else {
             TVXServices.storage.remove(PROPERTY_PREFIX + "qualityLevel");
         }
@@ -300,7 +370,11 @@ function HlsPlayer() {
         var fallbackLevelIndex = -1;
         var storedQualityLevel = getStoredQualityLevel();
         foreachQualityLevel(function(index, track) {
-            if (storedQualityLevel === track.width.toString()) {
+            if (fallbackLevelIndex == -1) {
+                //Fallback to first quality level
+                fallbackLevelIndex = index;
+            }
+            if (storedQualityLevel === track.height.toString()) {
                 levelIndex = index;
                 return true;//break
             }
@@ -709,6 +783,8 @@ function HlsPlayer() {
         if (!ended) {
             ended = true;
             TVXVideoPlugin.debug("HLS video ended");
+            sendProgress(player != null ? player.currentTime : 0);
+            stopProgressReporting();
             TVXVideoPlugin.stopPlayback();
         }
     };
@@ -769,6 +845,7 @@ function HlsPlayer() {
                     player.src = url;
                     player.load();
                 }
+                startProgressReporting();
             } else {
                 TVXVideoPlugin.warn("HLS URL is missing or empty");
             }
@@ -793,6 +870,7 @@ function HlsPlayer() {
             hls.destroy();
             hls = null;
         }
+        stopProgressReporting();
     };
     this.play = function() {
         if (player != null) {

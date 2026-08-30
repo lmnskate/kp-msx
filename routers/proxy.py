@@ -15,6 +15,42 @@ router = APIRouter(
 )
 
 
+@router.head('/proxy')
+async def proxy_head(
+    request: Request
+):
+    url = request.query_params.get('url')
+    if not url:
+        return Response(
+            status_code=400
+        )
+
+    try:
+        proxy.check_url(url)
+    except proxy.UnknownDomainError:
+        logger.warning('Proxy HEAD request to unknown domain: %s', url)
+        return Response(
+            status_code=403
+        )
+
+    try:
+        code, content_type, response_headers = await proxy.head(
+            url,
+            client_headers=request.headers
+        )
+    except (aiohttp.ClientError, asyncio.TimeoutError):
+        logger.warning('Proxy upstream HEAD request failed: %s', url)
+        return Response(
+            status_code=502
+        )
+
+    return Response(
+        status_code=code,
+        media_type=content_type,
+        headers=response_headers
+    )
+
+
 @router.get('/proxy')
 async def proxy_request(
     request: Request

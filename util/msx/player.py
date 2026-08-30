@@ -11,7 +11,11 @@ def player_action_btn():
 def play_action(
     video_url,
     proxy: bool = False,
-    alternative_player: bool = False
+    alternative_player: bool = False,
+    content_id=None,
+    season=None,
+    episode=None,
+    position=None
 ):
     url = make_proxy_url(video_url) if proxy else video_url
     # Remember the CDN domain for the domains file regardless of whether the
@@ -24,4 +28,18 @@ def play_action(
         # Self-hosted copy of the hlsx plugin (patched track indicators).
         player_url = f'{server.base_url}/hlsx.html'
 
-    return f'video:plugin:{player_url}?' + urlencode({'url': url})
+    params = {'url': url}
+    if content_id is not None:
+        params['content_id'] = content_id
+    if season is not None:
+        params['season'] = season
+    if episode is not None:
+        params['episode'] = episode
+    if position is not None and position > 0:
+        params['position'] = int(position)
+
+    return (
+        f'video:plugin:{player_url}?'
+        + urlencode(params)
+        + '&client_id={ID}'
+    )

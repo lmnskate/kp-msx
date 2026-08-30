@@ -400,6 +400,24 @@ class KinoPub:
             method='POST'
         )
 
+    async def mark_time(
+        self,
+        content_id,
+        position,
+        season=None,
+        episode=None
+    ):
+        params = {'id': content_id, 'time': int(position)}
+        if season is not None:
+            params['season'] = season
+        if episode is not None:
+            params['video'] = episode
+
+        await self.api(
+            '/watching/marktime',
+            params
+        )
+
     async def toggle_watched(
         self,
         content_id,
