@@ -262,6 +262,7 @@ async def search(
     )
 
 
+@router.get('/history')
 async def history(
     request: Request
 ):
