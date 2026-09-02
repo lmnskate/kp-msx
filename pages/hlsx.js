@@ -172,8 +172,32 @@ function HlsPlayer() {
     var isSubtitleTrackSelected = function(track) {
         return track != null && hls.subtitleTrackController.subtitleTrack === track.id;
     };
+    var getDefaultQualityHeight = function() {
+        var defaultHeight = -1;
+        var fallbackHeight = -1;
+        foreachQualityLevel(function(index, level) {
+            if (fallbackHeight == -1) {
+                fallbackHeight = level.height;
+            }
+            if (level.height == 1080) {
+                defaultHeight = 1080;
+                return true;//break
+            }
+            if (level.height < 1080 && level.height > defaultHeight) {
+                defaultHeight = level.height;
+            }
+        });
+        return defaultHeight >= 0 ? defaultHeight : fallbackHeight;
+    };
     var isQualityLevelSelected = function(level) {
-        return level != null && getStoredQualityLevel() == level.height.toString();
+        var storedQualityLevel = getStoredQualityLevel();
+        if (level == null) {
+            return false;
+        }
+        if (storedQualityLevel != null) {
+            return storedQualityLevel == level.height.toString();
+        }
+        return level.height == getDefaultQualityHeight();
     };
     var createIndexTrack = function(index, track) {
         if (index >= 0 && track != null) {
@@ -373,6 +397,7 @@ function HlsPlayer() {
         var levelIndex = -1;
         var fallbackLevelIndex = -1;
         var storedQualityLevel = getStoredQualityLevel();
+        var defaultQualityHeight = storedQualityLevel == null ? getDefaultQualityHeight() : null;
         foreachQualityLevel(function(index, track) {
             if (fallbackLevelIndex == -1) {
                 //Fallback to first quality level
@@ -381,6 +406,9 @@ function HlsPlayer() {
             if (storedQualityLevel === track.height.toString()) {
                 levelIndex = index;
                 return true;//break
+            }
+            if (storedQualityLevel == null && levelIndex == -1 && track.height == defaultQualityHeight) {
+                levelIndex = index;
             }
         });
         return levelIndex >= 0 ? levelIndex : fallbackLevelIndex;

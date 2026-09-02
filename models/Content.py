@@ -216,15 +216,6 @@ class Content:
         if self.seasons:
             buttons.append(self.to_subscription_button())
 
-        if self.trailer:
-            buttons.append(
-                self.to_trailer_button(
-                    len(buttons),
-                    proxy=proxy,
-                    alternative_player=alternative_player
-                )
-            )
-
         watch_button = {
             'id': WATCH_BUTTON_ID,
             'type': 'button',
