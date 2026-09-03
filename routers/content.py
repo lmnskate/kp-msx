@@ -270,6 +270,15 @@ async def history(
     page = _page(request)
     result = await device.kp.get_history(page=page)
 
+    if page == 1:
+        # /history only contains finished (or previously finished) media;
+        # started-but-unfinished movies/serials live in /watching, so merge
+        # them in — otherwise started items never show up in history.
+        started = await device.kp.get_watching_movies()
+        started += await device.kp.get_watching(subscribed=0)
+        seen = {i.id for i in started}
+        result = started + [i for i in result if i.id not in seen]
+
     if page == 1 and not result:
         return msx.empty_history_response()
 
