@@ -15,6 +15,7 @@ from models.Device import Device
 from routers import content, proxy, registration, settings, static
 from util import msx
 from util import proxy as proxy_util
+from util.msx import player as msx_player
 
 logger = logging.getLogger(__name__)
 
@@ -174,6 +175,10 @@ async def auth(
                 transient = True
 
     device = request.state.device
+    if device is not None:
+        # Playable URLs built by play_action() embed the plugin URL with this
+        # id, since MSX does not substitute {ID} there.
+        msx_player.current_device_id.set(device.id)
     if device is not None and device.user_agent is None:
         ua = request.headers.get('user-agent')
         if ua is not None:

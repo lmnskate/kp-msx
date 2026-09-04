@@ -423,11 +423,16 @@ async def progress(
     if position <= 0:
         return msx.empty_response()
 
+    if season <= 0 and episode <= 0:
+        # KinoPub rejects marktime without "video" (400); a plain movie is
+        # always video number 1
+        episode = 1
+
     await device.kp.mark_time(
         content_id,
         position,
         season=str(season) if season > 0 else None,
-        episode=str(episode) if episode > 0 else None
+        episode=str(episode)
     )
 
     return msx.empty_response()

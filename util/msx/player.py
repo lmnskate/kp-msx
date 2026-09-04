@@ -1,7 +1,14 @@
+import contextvars
 from urllib.parse import urlencode
 
 from config.settings import server
 from util.proxy import make_proxy_url, remember_url
+
+# Real id of the device being served (set by the auth middleware). MSX does
+# not substitute the {ID} placeholder inside plugin page URLs, so the player
+# plugins must receive the actual client id in the plugin URL to report
+# playback progress to /msx/progress.
+current_device_id = contextvars.ContextVar('current_device_id', default=None)
 
 
 def player_action_btn():
@@ -38,8 +45,9 @@ def play_action(
     if position is not None and position > 0:
         params['position'] = int(position)
 
+    client_id = current_device_id.get() or '{ID}'
     return (
         f'video:plugin:{player_url}?'
         + urlencode(params)
-        + '&client_id={ID}'
+        + f'&client_id={client_id}'
     )
