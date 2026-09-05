@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from fastapi import APIRouter
@@ -48,6 +49,30 @@ async def _get_content(
     return await device.kp.get_single_content(
         request.query_params.get('content_id')
     )
+
+
+async def _enrich_watching_items(
+    device,
+    items
+):
+    # /watching/* entries are shallow (no year/rating/plot), so swap them
+    # for the full items to render proper list entries; keep the shallow
+    # one when the details request fails.
+    detailed = await asyncio.gather(*[
+        device.kp.get_single_content(i.id, nolinks=True)
+        for i in items
+    ])
+
+    result = []
+    for shallow, full in zip(items, detailed):
+        if full is None:
+            result.append(shallow)
+            continue
+        if full.new_episodes is None:
+            full.new_episodes = shallow.new_episodes
+        result.append(full)
+
+    return result
 
 
 async def _ensure_bookmark_folders(
@@ -276,6 +301,7 @@ async def history(
         # them in — otherwise started items never show up in history.
         started = await device.kp.get_watching_movies()
         started += await device.kp.get_watching(subscribed=0)
+        started = await _enrich_watching_items(device, started)
         seen = {i.id for i in started}
         result = started + [i for i in result if i.id not in seen]
 

@@ -6,7 +6,9 @@
 //KP-MSX patch: the track indicators in the top-right corner show the full
 //track name from the HLS manifest (e.g. "01. Двухголосый. Twister (RUS)")
 //instead of an uppercased 8-character prefix; quality choice is keyed by
-//rendition height; playback position is reported to /msx/progress every
+//rendition height, defaults to 1080p (or the closest available height) and
+//falls back to that default when the stored height is missing from the
+//manifest; playback position is reported to /msx/progress every
 //10 s while it changes. All patches are marked.
 /******************************************************************************/
 function HlsPlayer() {
@@ -173,31 +175,46 @@ function HlsPlayer() {
         return track != null && hls.subtitleTrackController.subtitleTrack === track.id;
     };
     var getDefaultQualityHeight = function() {
-        var defaultHeight = -1;
-        var fallbackHeight = -1;
+        //KP-MSX patch: default to 1080p or the closest available height —
+        //the best one at or below 1080, otherwise the smallest one above
+        var belowOrEqual = -1;
+        var above = -1;
         foreachQualityLevel(function(index, level) {
-            if (fallbackHeight == -1) {
-                fallbackHeight = level.height;
+            var height = level.height;
+            if (height == null) {
+                return;
             }
-            if (level.height == 1080) {
-                defaultHeight = 1080;
-                return true;//break
-            }
-            if (level.height < 1080 && level.height > defaultHeight) {
-                defaultHeight = level.height;
+            if (height <= 1080) {
+                if (height > belowOrEqual) {
+                    belowOrEqual = height;
+                }
+            } else if (above == -1 || height < above) {
+                above = height;
             }
         });
-        return defaultHeight >= 0 ? defaultHeight : fallbackHeight;
+        return belowOrEqual >= 0 ? belowOrEqual : above;
+    };
+    var getSelectedQualityHeight = function() {
+        //KP-MSX patch: the stored choice applies only when the current
+        //manifest actually has a rendition with that height; otherwise fall
+        //back to the default height instead of the first (worst) level
+        var storedQualityLevel = getStoredQualityLevel();
+        if (storedQualityLevel != null) {
+            var found = false;
+            foreachQualityLevel(function(index, level) {
+                if (storedQualityLevel === level.height.toString()) {
+                    found = true;
+                    return true;//break
+                }
+            });
+            if (found) {
+                return parseInt(storedQualityLevel);
+            }
+        }
+        return getDefaultQualityHeight();
     };
     var isQualityLevelSelected = function(level) {
-        var storedQualityLevel = getStoredQualityLevel();
-        if (level == null) {
-            return false;
-        }
-        if (storedQualityLevel != null) {
-            return storedQualityLevel == level.height.toString();
-        }
-        return level.height == getDefaultQualityHeight();
+        return level != null && level.height == getSelectedQualityHeight();
     };
     var createIndexTrack = function(index, track) {
         if (index >= 0 && track != null) {
@@ -396,18 +413,13 @@ function HlsPlayer() {
     var getDefaultQualityLevelIndex = function() {
         var levelIndex = -1;
         var fallbackLevelIndex = -1;
-        var storedQualityLevel = getStoredQualityLevel();
-        var defaultQualityHeight = storedQualityLevel == null ? getDefaultQualityHeight() : null;
+        var selectedHeight = getSelectedQualityHeight();
         foreachQualityLevel(function(index, track) {
             if (fallbackLevelIndex == -1) {
                 //Fallback to first quality level
                 fallbackLevelIndex = index;
             }
-            if (storedQualityLevel === track.height.toString()) {
-                levelIndex = index;
-                return true;//break
-            }
-            if (storedQualityLevel == null && levelIndex == -1 && track.height == defaultQualityHeight) {
+            if (levelIndex == -1 && track.height == selectedHeight) {
                 levelIndex = index;
             }
         });

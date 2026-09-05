@@ -230,9 +230,13 @@ class KinoPub:
 
     async def get_single_content(
         self,
-        id
+        id,
+        nolinks=False
     ):
-        result = await self.api(f'/items/{id}')
+        result = await self.api(
+            f'/items/{id}',
+            {'nolinks': 1} if nolinks else None
+        )
         if result is None:
             return None
 
