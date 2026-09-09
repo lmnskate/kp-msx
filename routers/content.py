@@ -357,21 +357,6 @@ async def single_collection(
     )
 
 
-@router.get('/similar')
-async def similar(
-    request: Request
-):
-    device = request.state.device
-    result = await device.kp.get_similar(
-        request.query_params.get('content_id')
-    )
-
-    return msx.content_list(
-        result,
-        device_settings=device.settings
-    )
-
-
 @router.get('/unfinished')
 async def unfinished(
     request: Request
@@ -397,18 +382,6 @@ async def countries(
         request.query_params.get('category'),
         result
     )
-
-
-@router.post('/clear_history')
-async def clear_history(
-    request: Request
-):
-    device = request.state.device
-    await device.kp.clear_history_item(
-        request.query_params.get('content_id')
-    )
-
-    return msx.empty_response()
 
 
 def _find_video_watched(

@@ -332,30 +332,10 @@ class KinoPub:
             default=[]
         )
 
-    async def get_similar(
-        self,
-        content_id
-    ):
-        return await self.fetch_list(
-            '/items/similar',
-            Content,
-            params={'id': content_id},
-            default=[]
-        )
-
     async def get_user(
         self
     ):
         return await self.api('/user')
-
-    async def clear_history_item(
-        self,
-        content_id
-    ):
-        await self.api(
-            f'/history/clear-for-item?id={content_id}',
-            method='POST'
-        )
 
     async def get_tv(
         self

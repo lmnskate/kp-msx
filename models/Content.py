@@ -1,5 +1,5 @@
 from config.globals import (BOOKMARK_BUTTON_ID, SUBSCRIPTION_BUTTON_ID,
-                            TRAILER_BUTTON_ID, WATCH_BUTTON_ID)
+                            WATCH_BUTTON_ID)
 from models.Folder import Folder
 from models.Poster import Poster
 from models.Season import Season
@@ -32,7 +32,9 @@ class Content:
 
         self.poster = Poster(data.get('posters') or {})
 
-        self.rating = data.get('imdb_rating') or data.get('kinopoisk_rating')
+        self.imdb_rating = data.get('imdb_rating')
+        self.kinopoisk_rating = data.get('kinopoisk_rating')
+        self.rating = self.imdb_rating or self.kinopoisk_rating
         self.is_4k = data.get('quality') == 2160
 
         bookmarks = data.get('bookmarks')
@@ -55,8 +57,6 @@ class Content:
             self.seasons = [Season(i, self.id) for i in seasons]
 
         self.new_episodes = data.get('new')
-
-        self.trailer = (data.get('trailer') or {}).get('url')
 
     def update_bookmarks(
         self,
@@ -151,7 +151,7 @@ class Content:
         return {
             'id': SUBSCRIPTION_BUTTON_ID,
             'type': 'button',
-            'layout': '6,5,1,1',
+            'layout': '4,5,1,1',
             'label': label,
             'action': msx.format_action(
                 '/msx/toggle_subscription',
@@ -164,44 +164,19 @@ class Content:
         self
     ):
         if self.in_bookmarks():
-            label = '{ico:msx-yellow:bookmark}'
+            label = '{ico:msx-yellow:bookmark} В закладки'
         else:
-            label = '{ico:msx-white:bookmark}'
+            label = '{ico:msx-white:bookmark} В закладки'
 
         return {
             'id': BOOKMARK_BUTTON_ID,
             'type': 'button',
-            'layout': '7,5,1,1',
+            'layout': '4,5,4,1',
             'label': label,
             'action': msx.format_action(
                 '/msx/content/bookmarks',
                 params={'content_id': self.id},
                 module='panel'
-            )
-        }
-
-    def to_trailer_button(
-        self,
-        qty,
-        proxy: bool = False,
-        alternative_player: bool = False
-    ):
-        props = {'trigger:background': 'player:button:eject:execute'}
-        props.update(msx.DEFAULT_PLAY_BUTTON_PROPS)
-
-        return {
-            'id': TRAILER_BUTTON_ID,
-            'type': 'button',
-            'layout': f'{7 - qty},5,1,1',
-            'label': '{ico:msx-white:movie}',
-            'playerLabel': f'Трейлер {self.title}',
-            'properties': props,
-            'action': msx.play_action(
-                self.trailer,
-                # Trailers are short and usually work fine without proxy;
-                # forcing direct avoids unnecessary proxy load/issues.
-                proxy=False,
-                alternative_player=alternative_player
             )
         }
 
@@ -211,20 +186,18 @@ class Content:
         alternative_player: bool = False,
         device_settings=None
     ):
-        buttons = [self.to_bookmark_button()]
+        bookmark_button = self.to_bookmark_button()
+        buttons = [bookmark_button]
 
         if self.seasons:
             buttons.append(self.to_subscription_button())
+            bookmark_button['layout'] = '5,5,3,1'
 
         watch_button = {
             'id': WATCH_BUTTON_ID,
             'type': 'button',
-            'layout': f'4,5,{4 - len(buttons)},1',
-            'label': (
-                'Смотреть'
-                if len(buttons) <= 2
-                else '{ico:msx-white:play-circle-outline}'
-            ),
+            'layout': '4,4,4,1',
+            'label': '{ico:play-circle-outline} Смотреть',
             'playerLabel': self.title,
             'focus': True,
             'action': self.msx_action(
@@ -242,8 +215,13 @@ class Content:
         buttons = [watch_button] + buttons
 
         stamp_parts = []
-        if self.rating:
-            stamp_parts.append(f'{{ico:stars}} {self.rating}')
+        ratings = []
+        if self.kinopoisk_rating:
+            ratings.append(f'КП {self.kinopoisk_rating}')
+        if self.imdb_rating:
+            ratings.append(f'IMDb {self.imdb_rating}')
+        if ratings:
+            stamp_parts.append('{ico:stars} ' + ' · '.join(ratings))
         if self.year:
             stamp_parts.append(f'{{ico:calendar-month}} {self.year}')
         if self.is_4k:
@@ -268,7 +246,7 @@ class Content:
             teaser,
             {
                 'type': 'default',
-                'layout': '4,0,4,5',
+                'layout': '4,0,4,4',
                 'text': self.plot,
                 'action': 'focus:plot'
             }

@@ -55,6 +55,3 @@ SWITCH_IDS = frozenset([UHD_ID, HDR_ID, HEVC_ID, ALTERNATIVE_PLAYER_ID])
 SUBSCRIPTION_BUTTON_ID = 'subscription_button'
 BOOKMARK_BUTTON_ID = 'bookmark_button'
 WATCH_BUTTON_ID = 'watch_button'
-TRAILER_BUTTON_ID = 'trailer_button'
-SIMILAR_BUTTON_ID = 'similar_button'
-CLEAR_HISTORY_BUTTON_ID = 'clear_history_button'
