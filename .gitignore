@@ -1,7 +1,10 @@
 kp-sqlite.db
 kp-sqlite.db.lock
-cdn-domains.txt
-nginx.conf
+/nginx.conf
+
+data/*
+!data/.gitkeep
+backups/
 AGENTS.md
 tools/
 TODO.md

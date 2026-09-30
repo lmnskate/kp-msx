@@ -1,236 +1,131 @@
-# Kinopub for Media Station X
+<div align="center">
 
-Watch [KinoPub](https://kino.pub) on your TV through [Media Station X](https://msx.benzac.de/).
+# KP-MSX
 
-This is a small server that sits between your TV and the KinoPub API — useful when direct access to KinoPub is blocked in your region. Deploy it somewhere with unrestricted access, point MSX at it, and you're set.
+**Watch [KinoPub](https://kino.pub) on your TV through [Media Station X](https://msx.benzac.de/)**
 
-Fork of [slonopot/kp-msx](https://github.com/slonopot/kp-msx) with SQLite instead of MongoDB and other improvements.
+![Python](https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-async-009688?logo=fastapi&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-embedded-003B57?logo=sqlite&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 
-## Security notes
+[Features](#features) •
+[Quick Start](#quick-start) •
+[Management](#management) •
+[Configuration](#configuration) •
+[Security](#security)
 
-- **The `id` query parameter is your device credential.** Anyone who knows a
-  device id can browse the KinoPub account linked to it, change bookmarks,
-  history, and settings. Keep URLs containing `id=...` private, do not share
-  them in public logs, and avoid logging full query strings on the server.
-- **`/msx/proxy` and `/msx/subtitle` are unauthenticated allowlist relays.**
-  They only fetch domains previously seen while browsing KinoPub, but anyone
-  who can reach your server can fetch arbitrary paths on those domains through
-  it (on your bandwidth). If that matters to you, restrict access at the
-  reverse proxy/firewall level.
+</div>
 
-## Setup
+---
 
-Python 3.12+ required. No external database needed — SQLite is created automatically.
+## Features
+
+- KinoPub on TV: menu, categories, search, bookmarks, history, collections, TV channels
+- Cross-device resume — playback progress is synced back to KinoPub
+- Built-in media proxy — the TV only talks to this server (works where KinoPub is blocked)
+- Two self-hosted player plugins (hls.js default, HTML5 alternative) with server-side audio switching
+- Customizable menu — Search, Bookmarks, History, and Settings always stay
+- SQLite storage, zero external services
+
+Fork of [slonopot/kp-msx](https://github.com/slonopot/kp-msx) — SQLite instead
+of MongoDB, Docker deployment, and more.
+
+## Quick Start
+
+Requires Docker with the Compose plugin.
 
 ```bash
-# Clone and install
 git clone https://github.com/llmnskate/kp-msx.git
 cd kp-msx
+cp .env.example .env   # edit SERVER_HOST, KP_CLIENT_ID, KP_CLIENT_SECRET
+./kp-msx.sh start
+```
+
+Check: `curl http://<your-ip>:1234/msx/start.json`
+TV: **MSX → Settings → Start Parameter** → `http://<your-ip>:1234`.
+
+Upgrading from a non-Docker install: put your existing database at
+`data/kp-sqlite.db` before the first start — it will be picked up as-is
+(migrations run automatically on startup).
+
+The stack: `server` (FastAPI app, internal `:8000`) + `nginx` (public
+`:1234`, serves `/icons/` from disk). State lives in `./data` (SQLite) and
+survives rebuilds and updates.
+
+## Management
+
+```bash
+./kp-msx.sh start     # build and start the stack
+./kp-msx.sh status    # stack status and the TV entry point
+./kp-msx.sh logs      # follow logs (optionally: ./kp-msx.sh logs server)
+./kp-msx.sh restart   # recreate containers, re-reading .env and conf/
+./kp-msx.sh stop      # stop everything (data is kept)
+./kp-msx.sh update    # rebuild from source and restart (e.g. after git pull)
+./kp-msx.sh backup    # consistent DB backup into ./backups/ (safe on a live DB)
+./kp-msx.sh shell     # shell inside the server container
+```
+
+Restore a backup:
+
+```bash
+./kp-msx.sh stop
+cp backups/kp-sqlite-YYYYMMDD-HHMMSS.db data/kp-sqlite.db
+./kp-msx.sh start
+```
+
+`conf/nginx.conf` and `src/icons/` are bind-mounted — changes apply with
+`./kp-msx.sh restart`, no rebuild.
+
+## Development
+
+Requires Python 3.12+.
+
+```bash
 python -m venv .venv
-.venv/bin/pip install -r requirements.txt
-
-# Configure
-cp .env.example .env
-
-# Running
-.venv/bin/python main.py
+.venv/bin/pip install -r src/requirements.txt
+.venv/bin/python src/main.py
 ```
 
-`python main.py` is the canonical way to run the server, development or
-production: it binds `0.0.0.0:SERVER_PORT` and runs uvicorn with
-`SERVER_WORKERS` processes and `SERVER_PROXY_HEADERS`. Everything is
-configured through `.env` — no command-line flags needed.
+## Configuration
 
-To verify, open `http://<your-ip>:1234/msx/start.json` in a browser.
+Required in `.env`:
 
-Then on your TV: open MSX → Settings → Start Parameter → enter `http://<your-ip>:1234`.
+- `SERVER_HOST` — IP or domain of your server, reachable from the TV
+- `KP_CLIENT_ID`, `KP_CLIENT_SECRET` — write to support@kino.pub
 
-## Running as a systemd service (Linux)
+`SERVER_PORT` (default `1234`) is the only other commonly changed one.
+Everything else has sane defaults — full list with allowed values:
+`src/config/settings.py`.
 
-Create a service file:
+## Security
 
-```bash
-sudo nano /etc/systemd/system/kp-msx.service
-```
+- The `id` query parameter is the device credential: anyone who knows it
+  controls the linked KinoPub account. Keep URLs with `id=...` private.
+- `/msx/proxy` and `/msx/subtitle` are unauthenticated relays restricted to
+  remembered KinoPub CDN domains. Restrict access at the firewall level if
+  that matters to you.
 
-Paste the following (adjust paths if your installation differs):
-
-```ini
-[Unit]
-Description=KP-MSX Service
-After=network.target
-Wants=network.target
-
-[Service]
-User=user
-Group=user
-
-WorkingDirectory=/home/user/kp-msx
-
-# main.py reads .env itself; workers and proxy-headers are configured there.
-ExecStart=/home/user/kp-msx/.venv/bin/python main.py
-
-Restart=always
-RestartSec=5
-
-KillSignal=SIGINT
-TimeoutStopSec=30
-
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Then enable and start the service:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable kp-msx
-sudo systemctl start kp-msx
-
-# Check status
-sudo systemctl status kp-msx
-
-# View logs
-journalctl -u kp-msx -f
-```
-
-## Running behind nginx (optional)
-
-nginx is not required — the app works fine on its own. Use it if you want a
-proper reverse proxy in front: nginx holds the public port, serves the icons
-from disk, and the app stays hidden on localhost.
-
-The split of responsibilities:
-
-- **nginx** — binds the public address (`1234` in this example), proxies
-  everything to the app, serves `/icons/` directly.
-- **The app** — binds a private localhost address (`127.0.0.1:8000`) via
-  `SERVER_BIND_HOST`/`SERVER_BIND_PORT`, while `SERVER_HOST`/`SERVER_PORT`
-  keep the **public** values so the links generated for the TV point at nginx.
-
-### 1. Configure the app (`.env`)
-
-```ini
-SERVER_HOST=<your-server-ip>   # public address used in generated links
-SERVER_PORT=1234               # public nginx port
-SERVER_BIND_HOST=127.0.0.1
-SERVER_BIND_PORT=8000
-SERVER_PROXY_HEADERS=true
-```
-
-Start the app as usual (`.venv/bin/python main.py` or the systemd unit above)
-and verify it listens on the bind address:
-
-```bash
-curl http://127.0.0.1:8000/msx/start.json
-```
-
-### 2. Configure nginx
-
-Create `/etc/nginx/sites-available/kp-msx` (adjust the IP and paths):
-
-```nginx
-upstream kp_msx {
-    server 127.0.0.1:8000;   # must match SERVER_BIND_HOST:SERVER_BIND_PORT
-}
-
-server {
-    listen 1234;             # must match SERVER_PORT
-    server_name <your-server-ip>;
-
-    # Serve icons directly from disk, bypassing the app
-    location /icons/ {
-        alias /home/user/kp-msx/icons/;
-        access_log off;
-        expires 7d;
-        add_header Access-Control-Allow-Origin * always;
-    }
-
-    location / {
-        proxy_pass http://kp_msx;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header Connection "";
-        proxy_buffering off;        # don't buffer video streams
-        proxy_read_timeout 300s;    # long-lived HLS requests
-    }
-}
-```
-
-Enable and start it:
-
-```bash
-sudo ln -s /etc/nginx/sites-available/kp-msx /etc/nginx/sites-enabled/kp-msx
-sudo nginx -t
-sudo systemctl reload nginx
-```
-
-### 3. Verify end to end
-
-```bash
-curl http://<your-server-ip>:1234/msx/start.json   # through nginx
-```
-
-Then point the TV at `http://<your-server-ip>:1234` as usual.
-
-Troubleshooting: a `502 Bad Gateway` with `connect() failed ... 127.0.0.1:8000`
-in the nginx error log means the app is not listening on the bind address —
-check `SERVER_BIND_HOST`/`SERVER_BIND_PORT` against the `upstream` block.
-
-For HTTPS, terminate TLS in nginx (e.g. with certbot) and set
-`SERVER_SCHEME=https` and `SERVER_PORT=443` in `.env`.
-
-## Environment variables
-
-Variables are loaded from `.env`. See `.env.example` for a template.
-
-### Server (`SERVER_` prefix)
-
-| Variable             | Description                                        | Default           |
-|----------------------|----------------------------------------------------|-------------------|
-| `SERVER_HOST`        | Hostname or IP of your server (used to generate links) | **required**      |
-| `SERVER_PORT`        | Public port used to generate links                  | `1234`            |
-| `SERVER_SCHEME`      | Scheme for public links (`http` or `https`)         | `http`            |
-| `SERVER_SQLITE_URL`  | SQLite database path                                | `./kp-sqlite.db`  |
-| `SERVER_BIND_HOST`   | Address the server actually listens on (see "Running behind nginx") | `0.0.0.0` |
-| `SERVER_BIND_PORT`   | Port the server actually listens on (override together with `SERVER_BIND_HOST`) | `SERVER_PORT` |
-| `SERVER_WORKERS`     | Number of uvicorn worker processes                  | `1`               |
-| `SERVER_PROXY_HEADERS` | Trust `X-Forwarded-*` headers from a reverse proxy (`true`/`false`) | `false` |
-
-### KinoPub API (`KP_` prefix)
-
-| Variable           | Description                                           | Default  |
-|--------------------|-------------------------------------------------------|----------|
-| `KP_CLIENT_ID`     | KinoPub API client ID (write to support@kino.pub)     | **required** |
-| `KP_CLIENT_SECRET`  | KinoPub API client secret (write to support@kino.pub) | **required** |
-| `KP_PROTOCOL`      | Streaming protocol (`hls`, `hls2`, `hls4`, `http`)    | `hls4`   |
-| `KP_QUALITY`       | Preferred video quality (`2160p`, `1080p`, `720p`, `480p`); falls back to best available | `1080p` |
-
-## Project structure
+## Project Structure
 
 ```
-main.py              # FastAPI app, middleware, router includes
-config/
-    settings.py     # Pydantic settings (ServerSettings, KPSettings), loaded from .env
-    globals.py      # Constants: API URLs, timeouts, UI IDs, player URLs
-icons/              # Custom SVG icons
-routers/
-    static.py       # Static files and start.json
-    registration.py # Device registration
-    content.py      # Browsing, playback, bookmarks
-    settings.py     # Per-device settings
-    proxy.py        # Media proxy, HLS rewriting, error pages
-models/             # Data models (Content, Device, KinoPub client, etc.)
-util/
-    msx/            # MSX JSON response builders (core, menu, settings, registration, player)
-    proxy.py        # Domain-allowlist proxy
-    db.py           # SQLite storage
-    sqlite_migrations.py # Schema migrations
-pages/              # Static HTML/JS: self-hosted hlsx/html5x video player plugins, helper pages
+src/                # App service: code + Dockerfile + requirements.txt (compose build context)
+    main.py         # FastAPI app, middleware
+    config/         # Settings (.env), constants
+    routers/        # HTTP endpoints
+    models/         # KinoPub API wrappers, Device, MSX rendering
+    util/           # MSX JSON builders, proxy, SQLite
+    pages/          # Self-hosted player plugins, helper pages
+    icons/          # SVG icons
+conf/               # nginx config
+data/               # SQLite DB (bind-mounted, gitignored)
+backups/            # DB backups (gitignored)
+kp-msx.sh           # Management script
+docker-compose.yml  # server + nginx
 ```
+
+## Acknowledgments
+
+[slonopot/kp-msx](https://github.com/slonopot/kp-msx) ·
+[Media Station X](https://msx.benzac.de/) ·
+[msx-hlsx](https://github.com/slonopot/msx-hlsx)
