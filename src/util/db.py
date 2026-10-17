@@ -81,6 +81,26 @@ def _run_migrations():
 _run_migrations()
 
 
+def _check_writable():
+    # Fail fast at startup instead of surfacing "attempt to write a readonly
+    # database" later as a random "Execution Error" on the TV. A typical cause
+    # is a bind-mounted data directory owned by root while the container runs
+    # as uid 1000.
+    try:
+        connection.execute('CREATE TABLE IF NOT EXISTS _write_probe (id INT)')
+        connection.execute('DROP TABLE IF EXISTS _write_probe')
+    except sqlite3.OperationalError:
+        logger.exception(
+            'SQLite database %s is not writable; fix the ownership/permissions '
+            'of the data directory (e.g. chown -R 1000:1000 data)',
+            server.sqlite_url
+        )
+        raise
+
+
+_check_writable()
+
+
 def to_device_dict(
     row
 ):

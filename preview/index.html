@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+  ==========================================================================
+  KP-MSX · KinoPub TV — ПРОТОТИП ДИЗАЙНА (design mockup)
+  ==========================================================================
+  Это статический интерактивный макет будущего ТВ-клиента онлайн-кинотеатра
+  KinoPub. Бэкенда нет: все данные вымышленные и зашиты в app.js, постеры и
+  бэкдропы нарисованы CSS-градиентами. Цель — показать компоновку и стиль
+  интерфейса на Smart TV (холст 1920×1080, масштабируется под окно).
+
+  Управление (как с пульта):
+    ← → ↑ ↓   — навигация по элементам
+    Enter     — OK / выбрать
+    Backspace или Esc — назад
+  Мышь: наведение = фокус, клик = OK.
+
+  Экраны: Главная (hero + рельсы) → Карточка контента → Плеер.
+  Запуск: python3 -m http.server  в этой директории.
+  ==========================================================================
+-->
+<title>KinoPub TV — прототип интерфейса</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="stage">
+
+  <!-- Экран: Главная -->
+  <section id="screen-home" class="screen">
+    <div id="home-scroll">
+      <div id="home-content" class="scroll-content"></div>
+    </div>
+    <header id="topnav"></header>
+    <footer id="hint">← → ↑ ↓ — навигация&ensp;·&ensp;Enter — выбрать&ensp;·&ensp;Backspace — назад</footer>
+  </section>
+
+  <!-- Экран: Карточка контента (заполняется из JS) -->
+  <section id="screen-detail" class="screen hidden"></section>
+
+  <!-- Экран: Плеер -->
+  <section id="screen-player" class="screen hidden">
+    <div id="player-video"></div>
+    <div id="player-paused" class="hidden">▶</div>
+    <div id="player-overlay">
+      <div class="player-top">
+        <div>
+          <div id="pv-title"></div>
+          <div id="pv-ep"></div>
+        </div>
+        <div class="player-top-hint">Backspace — назад</div>
+      </div>
+      <div class="player-bottom">
+        <div class="player-progress">
+          <div id="pp-track"><div id="pp-fill"></div></div>
+          <div class="pp-times"><span id="pp-cur">0:00</span><span id="pp-total">0:00</span></div>
+        </div>
+        <div id="player-controls"></div>
+      </div>
+    </div>
+    <div id="player-popup" class="hidden"></div>
+  </section>
+
+  <div id="toast" class="hidden"></div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>

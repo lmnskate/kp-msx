@@ -32,11 +32,15 @@ check_env() {
 }
 
 # Directories bind-mounted into containers must exist beforehand and be
-# writable by uid 1000 — otherwise Docker creates them owned by root.
+# writable by uid 1000 (the container user). When Docker creates them itself
+# they end up owned by root, and the app then dies at startup with a SQLite
+# "readonly database" error — so fix the ownership right here when we can.
 ensure_mount_dirs() {
     for dir in data backups; do
         mkdir -p "$dir"
-        if [ "$(id -u)" != "1000" ] || [ ! -w "$dir" ]; then
+        if [ "$(id -u)" = "0" ]; then
+            [ "$(stat -c '%u' "$dir")" = "1000" ] || chown -R 1000:1000 "$dir"
+        elif [ "$(stat -c '%u' "$dir" 2>/dev/null)" != "1000" ] || [ ! -w "$dir" ]; then
             echo "NOTE: ./$dir must be writable by uid 1000 (the container user)." >&2
             echo "      Fix with:  sudo chown -R 1000:1000 $dir" >&2
         fi
