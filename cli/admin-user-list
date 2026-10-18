@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# usage: list — list registered devices as a table
+set -euo pipefail
+
+OP=list
+source "$(dirname "${BASH_SOURCE[0]}")/_leaf.sh"

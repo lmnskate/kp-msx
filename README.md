@@ -26,6 +26,8 @@
 - Built-in media proxy — the TV only talks to this server (works where KinoPub is blocked)
 - Two self-hosted player plugins (hls.js default, HTML5 alternative) with server-side audio switching
 - Customizable menu — Search, Bookmarks, History, and Settings always stay
+- Device management from the management script — list, reset, or delete
+  registered devices (`admin user ...`) without touching the database
 - SQLite storage, zero external services
 
 Fork of [slonopot/kp-msx](https://github.com/slonopot/kp-msx) — SQLite instead
@@ -38,7 +40,8 @@ Requires Docker with the Compose plugin.
 ```bash
 git clone https://github.com/llmnskate/kp-msx.git
 cd kp-msx
-cp .env.example .env   # edit SERVER_HOST, KP_CLIENT_ID, KP_CLIENT_SECRET
+./kp-msx.sh install    # builds the images; creates .env from .env.example if missing
+# → edit .env: SERVER_HOST, KP_CLIENT_ID, KP_CLIENT_SECRET
 ./kp-msx.sh start
 ```
 
@@ -56,15 +59,16 @@ survives rebuilds and updates.
 ## Management
 
 ```bash
-./kp-msx.sh start     # build and start the stack
-./kp-msx.sh status    # stack status and the TV entry point
-./kp-msx.sh logs      # follow logs (optionally: ./kp-msx.sh logs server)
+./kp-msx.sh install   # build/pull images and prepare the data dirs (one-time)
+./kp-msx.sh start     # start the stack
 ./kp-msx.sh restart   # recreate containers, re-reading .env and conf/
 ./kp-msx.sh stop      # stop everything (data is kept)
-./kp-msx.sh update    # rebuild from source and restart (e.g. after git pull)
 ./kp-msx.sh backup    # consistent DB backup into ./backups/ (safe on a live DB)
-./kp-msx.sh shell     # shell inside the server container
+./kp-msx.sh admin     # device management tree; run it bare to see its commands
+                      # (admin user list|delete <id>|reset <id>, each with --help)
 ```
+
+After `git pull` (code changes): `./kp-msx.sh install && ./kp-msx.sh restart`.
 
 Restore a backup:
 
@@ -120,7 +124,8 @@ src/                # App service: code + Dockerfile + requirements.txt (compose
 conf/               # nginx config
 data/               # SQLite DB (bind-mounted, gitignored)
 backups/            # DB backups (gitignored)
-kp-msx.sh           # Management script
+kp-msx.sh           # Management script (install/start/stop/restart/backup/admin)
+cli/                # The 'admin' command tree executed by kp-msx.sh
 docker-compose.yml  # server + nginx
 ```
 

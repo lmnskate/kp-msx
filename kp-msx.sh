@@ -4,20 +4,20 @@
 #
 # Usage: ./kp-msx.sh <command>
 #
-#   start            Start the stack (builds the image on first run)
-#   stop             Stop and remove the containers (data in ./data is kept)
-#   restart          Recreate the containers, re-reading .env and compose config
-#   status           Show stack status and the TV entry point
-#   logs [service]   Follow logs (optionally only of 'server' or 'nginx')
-#   build            Build the app image
-#   update           Rebuild the app image from source and restart the stack
-#   backup           Back up the database into ./backups/ (safe on a live DB)
-#   shell            Open a shell inside the app container
-#   help             Show this help
+#   install                Build/pull the images and prepare the data dirs.
+#                          Creates .env from .env.example if missing — edit it!
+#   start                  Start the stack (requires: install)
+#   stop                   Stop and remove the containers (data in ./data is kept)
+#   restart                Recreate the containers, re-reading .env and compose config
+#   backup                 Back up the database into ./backups/ (safe on a live DB)
+#   admin ...              Device management — a command tree of its own:
+#                          './kp-msx.sh admin' lists its commands and their help
+#   help                   Show this help
 
 set -euo pipefail
 
-cd "$(dirname "$(readlink -f "$0")")"
+ROOT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+cd "$ROOT_DIR"
 
 compose() {
     docker compose "$@"
@@ -26,7 +26,23 @@ compose() {
 check_env() {
     if [ ! -f .env ]; then
         echo "ERROR: .env not found." >&2
-        echo "Create it first:  cp .env.example .env  (then edit it)" >&2
+        echo "Create it first:  ./kp-msx.sh install  (generates one to edit)" >&2
+        exit 1
+    fi
+}
+
+check_installed() {
+    if ! docker image inspect kp-msx-server:latest >/dev/null 2>&1; then
+        echo "ERROR: the app image is not built yet." >&2
+        echo "Run:  ./kp-msx.sh install" >&2
+        exit 1
+    fi
+}
+
+check_running() {
+    if ! compose ps --status running --services 2>/dev/null | grep -qx server; then
+        echo "ERROR: the stack is not running." >&2
+        echo "Start it with:  ./kp-msx.sh start" >&2
         exit 1
     fi
 }
@@ -47,11 +63,26 @@ ensure_mount_dirs() {
     done
 }
 
+cmd_install() {
+    if [ ! -f .env ]; then
+        cp .env.example .env
+        echo "WARNING: .env did not exist — created it from .env.example."
+        echo "         EDIT .env BEFORE STARTING THE STACK: set at least"
+        echo "         SERVER_HOST, KP_CLIENT_ID, KP_CLIENT_SECRET."
+        echo
+    fi
+    ensure_mount_dirs
+    compose build
+    echo
+    echo "Installed. Edit .env if you have not yet, then start:  ./kp-msx.sh start"
+}
+
 cmd_start() {
     check_env
     ensure_mount_dirs
+    check_installed
     compose up -d
-    echo "KP-MSX is starting. Check status with:  ./kp-msx.sh status"
+    echo "KP-MSX is starting."
 }
 
 cmd_stop() {
@@ -61,58 +92,8 @@ cmd_stop() {
 cmd_restart() {
     check_env
     ensure_mount_dirs
+    check_installed
     compose down
-    compose up -d
-}
-
-cmd_status() {
-    local green='' red='' dim='' reset=''
-    if [ -t 1 ]; then
-        green=$'\033[32m'; red=$'\033[31m'; dim=$'\033[2m'; reset=$'\033[0m'
-    fi
-
-    local rows
-    rows=$(compose ps --format '{{.Service}}|{{.State}}|{{.Status}}|{{.Ports}}' 2>/dev/null)
-
-    if [ -z "$rows" ]; then
-        printf '%b stack is not running — start it with: ./kp-msx.sh start\n' "${red}●${reset}"
-        return
-    fi
-
-    local dot service state status ports published
-    echo "$rows" | while IFS='|' read -r service state status ports; do
-        dot="$red●"
-        [ "$state" = 'running' ] && dot="$green●"
-        published=$(
-            echo "$ports" | tr ',' '\n' | grep -F -- '->' | grep -v '\[::\]' \
-                | sed 's|/tcp||g' | paste -sd' ' - || true
-        )
-        [ -z "$published" ] && published="${dim}internal only${reset}"
-        printf '%b %-8s %-26s %s\n' "$dot" "$service" "$status" "$published"
-    done
-
-    if [ -f .env ]; then
-        local scheme host port
-        scheme=$(sed -n 's/^SERVER_SCHEME=//p' .env | head -1)
-        host=$(sed -n 's/^SERVER_HOST=//p' .env | head -1)
-        port=$(sed -n 's/^SERVER_PORT=//p' .env | head -1)
-        echo
-        echo "TV entry point: ${scheme:-http}://${host:-<not set>}:${port:-1234}"
-    fi
-}
-
-cmd_logs() {
-    compose logs -f "$@"
-}
-
-cmd_build() {
-    compose build
-}
-
-cmd_update() {
-    check_env
-    ensure_mount_dirs
-    compose build
     compose up -d
 }
 
@@ -140,24 +121,17 @@ source.close()
     echo "Backup saved: backups/$file"
 }
 
-cmd_shell() {
-    compose exec server bash
-}
-
 cmd_help() {
     awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"
 }
 
 case "${1:-help}" in
+    install) cmd_install ;;
     start)   cmd_start ;;
     stop)    cmd_stop ;;
     restart) cmd_restart ;;
-    status)  cmd_status ;;
-    logs)    shift; cmd_logs "$@" ;;
-    build)   cmd_build ;;
-    update)  cmd_update ;;
     backup)  cmd_backup ;;
-    shell)   cmd_shell ;;
+    admin)   shift; exec "$ROOT_DIR/cli/admin" "$@" ;;
     help|-h|--help) cmd_help ;;
     *)
         echo "Unknown command: $1" >&2

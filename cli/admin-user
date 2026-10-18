@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# usage: user — manage registered devices
+set -euo pipefail
+
+CONTEXT=admin-user
+DESCRIPTION="Manage registered devices (KinoPub accounts linked to TVs)."
+
+source "$(dirname "${BASH_SOURCE[0]}")/_context.sh"

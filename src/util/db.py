@@ -143,6 +143,39 @@ def get_device_by_id(
     )
 
 
+def list_devices():
+    cursor = connection.execute(
+        f'SELECT {DEVICE_COLUMNS} FROM devices ORDER BY id'
+    )
+
+    return [
+        to_device_dict(row)
+        for row in cursor.fetchall()
+    ]
+
+
+def delete_device(
+    device_id
+):
+    cursor = connection.execute(
+        'DELETE FROM devices WHERE id = ?1',
+        [device_id]
+    )
+
+    return cursor.rowcount
+
+
+def reset_device_settings(
+    device_id
+):
+    cursor = connection.execute(
+        'UPDATE devices SET settings = NULL WHERE id = ?1',
+        [device_id]
+    )
+
+    return cursor.rowcount
+
+
 def create_device(
     entry
 ):

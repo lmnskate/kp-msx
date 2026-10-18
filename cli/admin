@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# usage: user — manage registered devices (list, delete, reset)
+set -euo pipefail
+
+CONTEXT=admin
+DESCRIPTION="Device management."
+
+source "$(dirname "${BASH_SOURCE[0]}")/_context.sh"
