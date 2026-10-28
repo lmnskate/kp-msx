@@ -32,11 +32,13 @@ check_env() {
 }
 
 check_installed() {
-    if ! docker image inspect kp-msx-server:latest >/dev/null 2>&1; then
-        echo "ERROR: the app image is not built yet." >&2
-        echo "Run:  ./kp-msx.sh install" >&2
-        exit 1
-    fi
+    while read -r image; do
+        if ! docker image inspect "$image" >/dev/null 2>&1; then
+            echo "ERROR: image '$image' is not available yet." >&2
+            echo "Run:  ./kp-msx.sh install" >&2
+            exit 1
+        fi
+    done < <(compose config --images)
 }
 
 check_running() {
@@ -73,6 +75,9 @@ cmd_install() {
     fi
     ensure_mount_dirs
     compose build
+    # compose build only covers services with a build section — pull the rest
+    # (nginx) so start never has to download anything.
+    compose pull --ignore-buildable
     echo
     echo "Installed. Edit .env if you have not yet, then start:  ./kp-msx.sh start"
 }
